@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "wintercore:winter_core",
+    "wintercore:winter_core_base",
+    "wintercore:winter_core_pillar"
+  ]
+}

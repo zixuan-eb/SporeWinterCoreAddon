@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "OBO",
+    "BIB",
+    "OBO"
+  ],
+  "key": {
+    "O": { "item": "minecraft:obsidian" },
+    "B": { "item": "minecraft:blue_ice" },
+    "I": { "item": "minecraft:iron_block" }
+  },
+  "result": {
+    "item": "wintercore:winter_core_base",
+    "count": 2
+  }
+}

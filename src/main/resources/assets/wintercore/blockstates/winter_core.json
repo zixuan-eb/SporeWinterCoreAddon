@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "formed=false": { "model": "wintercore:block/winter_core" },
+    "formed=true": { "model": "wintercore:block/winter_core_empty" }
+  }
+}

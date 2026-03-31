@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CWC",
+    "WSW",
+    "CWC"
+  ],
+  "key": {
+    "S": { "item": "minecraft:nether_star" },
+    "C": { "item": "spore:cdu" },
+    "W": { "item": "minecraft:crying_obsidian" }
+  },
+  "result": {
+    "item": "wintercore:winter_core"
+  }
+}

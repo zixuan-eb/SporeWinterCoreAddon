@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IBI",
+    "NIN",
+    "IBI"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_block" },
+    "B": { "item": "minecraft:blue_ice" },
+    "N": { "item": "minecraft:netherite_scrap" }
+  },
+  "result": {
+    "item": "wintercore:winter_core_pillar",
+    "count": 2
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column_horizontal",
+  "textures": {
+    "end": "wintercore:block/core_base",
+    "side": "wintercore:block/core_cage"
+  }
+}

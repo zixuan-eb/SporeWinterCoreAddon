@@ -1,0 +1,58 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "wintercore:block/core_cage",
+    "cage": "wintercore:block/core_cage"
+  },
+  "elements": [
+    {
+      "name": "BaseAnchor",
+      "from": [2, 0, 2],
+      "to": [14, 16, 14],
+      "faces": {
+        "north": {"uv": [2, 0, 14, 16], "texture": "#cage"},
+        "east": {"uv": [2, 0, 14, 16], "texture": "#cage"},
+        "south": {"uv": [2, 0, 14, 16], "texture": "#cage"},
+        "west": {"uv": [2, 0, 14, 16], "texture": "#cage"},
+        "up": {"uv": [2, 2, 14, 14], "texture": "#cage"},
+        "down": {"uv": [2, 2, 14, 14], "texture": "#cage"}
+      }
+    },
+    {
+      "name": "MidJoint",
+      "from": [6, 14, 6],
+      "to": [18, 24, 18],
+      "faces": {
+        "north": {"uv": [2, 4, 14, 14], "texture": "#cage"},
+        "east": {"uv": [2, 4, 14, 14], "texture": "#cage"},
+        "south": {"uv": [2, 4, 14, 14], "texture": "#cage"},
+        "west": {"uv": [2, 4, 14, 14], "texture": "#cage"},
+        "up": {"uv": [2, 2, 14, 14], "texture": "#cage"}
+      }
+    },
+    {
+      "name": "UpperArm",
+      "from": [12, 22, 12],
+      "to": [22, 30, 22],
+      "faces": {
+        "north": {"uv": [3, 6, 13, 14], "texture": "#cage"},
+        "east": {"uv": [3, 6, 13, 14], "texture": "#cage"},
+        "south": {"uv": [3, 6, 13, 14], "texture": "#cage"},
+        "west": {"uv": [3, 6, 13, 14], "texture": "#cage"},
+        "up": {"uv": [3, 3, 13, 13], "texture": "#cage"}
+      }
+    },
+    {
+      "name": "ClawTip",
+      "from": [18, 28, 18],
+      "to": [26, 32, 26],
+      "faces": {
+        "north": {"uv": [4, 10, 12, 14], "texture": "#cage"},
+        "east": {"uv": [4, 10, 12, 14], "texture": "#cage"},
+        "south": {"uv": [4, 10, 12, 14], "texture": "#cage"},
+        "west": {"uv": [4, 10, 12, 14], "texture": "#cage"},
+        "up": {"uv": [4, 4, 12, 12], "texture": "#cage"}
+      }
+    }
+  ]
+}
