@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    " N ",
+    " O "
+  ],
+  "key": {
+    "E": { "item": "minecraft:end_crystal" },
+    "N": { "item": "minecraft:nether_star" },
+    "O": { "item": "minecraft:crying_obsidian" }
+  },
+  "result": {
+    "item": "wintercore:winter_core_pedestal",
+    "count": 1
+  }
+}

@@ -1,8 +1,9 @@
 {
   "multipart": [
-    { "when": {"formed": "false", "axis": "y"}, "apply": { "model": "wintercore:block/winter_core_pillar" } },
-    { "when": {"formed": "false", "axis": "z"}, "apply": { "model": "wintercore:block/winter_core_pillar_horizontal", "x": 90 } },
-    { "when": {"formed": "false", "axis": "x"}, "apply": { "model": "wintercore:block/winter_core_pillar_horizontal", "x": 90, "y": 90 } },
+    { "when": {"formed": "false", "up": "false", "down": "false"}, "apply": { "model": "wintercore:block/pillar_single" } },
+    { "when": {"formed": "false", "up": "true", "down": "false"}, "apply": { "model": "wintercore:block/pillar_bottom" } },
+    { "when": {"formed": "false", "up": "false", "down": "true"}, "apply": { "model": "wintercore:block/pillar_top" } },
+    { "when": {"formed": "false", "up": "true", "down": "true"}, "apply": { "model": "wintercore:block/pillar_middle" } },
     { "when": {"formed": "true", "is_top": "false", "corner": "0"}, "apply": { "model": "wintercore:block/winter_core_pillar_formed" } },
     { "when": {"formed": "true", "is_top": "false", "corner": "1"}, "apply": { "model": "wintercore:block/winter_core_pillar_formed", "y": 90 } },
     { "when": {"formed": "true", "is_top": "false", "corner": "2"}, "apply": { "model": "wintercore:block/winter_core_pillar_formed", "y": 180 } },

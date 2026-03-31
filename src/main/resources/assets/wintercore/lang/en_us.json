@@ -1,6 +1,7 @@
 {
-  "block.wintercore.winter_core": "Fimbulwinter Core",
-  "block.wintercore.winter_core_base": "Fimbulwinter Base",
-  "block.wintercore.winter_core_pillar": "Fimbulwinter Obelisk Pillar",
-  "itemGroup.winter_core": "Fimbulwinter Core Addon"
+  "itemGroup.winter_core_tab": "Fimbulwinter Core",
+  "block.wintercore.winter_core": "Winter Core",
+  "block.wintercore.winter_core_base": "Fimbulwinter Stone",
+  "block.wintercore.winter_core_pedestal": "Fimbulwinter Pedestal",
+  "block.wintercore.winter_core_pillar": "Fimbulwinter Pillar"
 }

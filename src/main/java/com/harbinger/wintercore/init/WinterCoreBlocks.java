@@ -3,6 +3,7 @@ package com.harbinger.wintercore.init;
 import com.harbinger.wintercore.WinterCoreAddon;
 import com.harbinger.wintercore.block.WinterCoreBlock;
 import com.harbinger.wintercore.block.WinterCoreBlockEntity;
+import com.harbinger.wintercore.block.WinterCorePillarBlock;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
@@ -32,8 +33,14 @@ public class WinterCoreBlocks {
     public static final RegistryObject<Item> WINTER_CORE_BASE_ITEM = ITEMS.register("winter_core_base",
             () -> new BlockItem(WINTER_CORE_BASE.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
 
+    public static final RegistryObject<Block> WINTER_CORE_PEDESTAL = BLOCKS.register("winter_core_pedestal", 
+            () -> new Block(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops()));
+    
+    public static final RegistryObject<Item> WINTER_CORE_PEDESTAL_ITEM = ITEMS.register("winter_core_pedestal",
+            () -> new BlockItem(WINTER_CORE_PEDESTAL.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
+
     public static final RegistryObject<Block> WINTER_CORE_PILLAR = BLOCKS.register("winter_core_pillar", 
-            () -> new WinterCorePillarBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops()));
+            () -> new WinterCorePillarBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops().noOcclusion()));
     
     public static final RegistryObject<Item> WINTER_CORE_PILLAR_ITEM = ITEMS.register("winter_core_pillar",
             () -> new BlockItem(WINTER_CORE_PILLAR.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
@@ -48,6 +55,7 @@ public class WinterCoreBlocks {
             .displayItems((parameters, output) -> {
                 output.accept(WINTER_CORE_ITEM.get());
                 output.accept(WINTER_CORE_BASE_ITEM.get());
+                output.accept(WINTER_CORE_PEDESTAL_ITEM.get());
                 output.accept(WINTER_CORE_PILLAR_ITEM.get());
             }).build());
 }

@@ -38,6 +38,11 @@ public class WinterCoreBlock extends BaseEntityBlock {
         return state.getValue(FORMED) ? net.minecraft.world.level.block.RenderShape.INVISIBLE : net.minecraft.world.level.block.RenderShape.MODEL;
     }
 
+    @Override
+    public net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level, net.minecraft.core.BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
+        return net.minecraft.world.level.block.Block.box(2.0D, 2.0D, 2.0D, 14.0D, 14.0D, 14.0D);
+    }
+
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
@@ -48,10 +53,24 @@ public class WinterCoreBlock extends BaseEntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
         if (level.isClientSide) {
-            return null; // Don't tick on client
+            return createTickerHelper(blockEntityType, WinterCoreBlocks.WINTER_CORE_BE.get(),
+                    WinterCoreBlockEntity::clientTick);
         }
         return createTickerHelper(blockEntityType, WinterCoreBlocks.WINTER_CORE_BE.get(),
                 WinterCoreBlockEntity::serverTick);
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock())) {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity instanceof WinterCoreBlockEntity core) {
+                if (core.isFormed) {
+                    core.revertMultiblock();
+                }
+            }
+            super.onRemove(state, level, pos, newState, isMoving);
+        }
     }
 
     @Override

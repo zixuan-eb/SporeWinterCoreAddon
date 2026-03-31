@@ -13,6 +13,9 @@ public class WinterCoreAddon {
     public WinterCoreAddon() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
+        // Register Config
+        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, com.harbinger.wintercore.config.WinterCoreConfig.COMMON_SPEC);
+
         // Register Blocks and BlockEntities
         WinterCoreBlocks.BLOCKS.register(modEventBus);
         WinterCoreBlocks.ITEMS.register(modEventBus);

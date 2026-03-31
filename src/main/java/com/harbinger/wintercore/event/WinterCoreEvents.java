@@ -2,6 +2,7 @@ package com.harbinger.wintercore.event;
 
 import com.harbinger.wintercore.WinterCoreAddon;
 import com.harbinger.wintercore.block.WinterCoreBlockEntity;
+import com.harbinger.wintercore.config.WinterCoreConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -50,7 +51,8 @@ public class WinterCoreEvents {
                 // Ignore Y-axis by checking distSqr on X and Z only
                 double dx = corePos.getX() - pos.getX();
                 double dz = corePos.getZ() - pos.getZ();
-                if ((dx * dx + dz * dz) <= (WinterCoreBlockEntity.EFFECT_RADIUS * WinterCoreBlockEntity.EFFECT_RADIUS)) {
+                int radius = WinterCoreConfig.COMMON.effectRadius.get();
+                if ((dx * dx + dz * dz) <= (radius * radius)) {
                     return true;
                 }
             }

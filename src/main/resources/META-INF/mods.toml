@@ -23,10 +23,10 @@ description="${mod_description}"
     ordering="NONE"
     side="BOTH"
 
-# We define the spore dependency optional so it loads if spore is present, but doesn't crash visually if missing (or we can make it mandatory)
+# We define the spore dependency as mandatory so players must have the original mod installed.
 [[dependencies.${mod_id}]]
     modId="spore"
-    mandatory=false
+    mandatory=true
     versionRange="[0,)"
     ordering="AFTER"
     side="BOTH"

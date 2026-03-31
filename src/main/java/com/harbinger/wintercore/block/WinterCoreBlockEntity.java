@@ -15,24 +15,27 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.registries.ForgeRegistries;
 
+import com.harbinger.wintercore.config.WinterCoreConfig;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class WinterCoreBlockEntity extends BlockEntity {
 
     // Global registry of all active Winter Cores to quickly lookup blockspawn rules anywhere in the world.
-    public static final Map<ResourceKey<Level>, Set<BlockPos>> ACTIVE_CORES = new HashMap<>();
+    public static final Map<ResourceKey<Level>, Set<BlockPos>> ACTIVE_CORES = new ConcurrentHashMap<>();
     
-    public static final int EFFECT_RADIUS = 96; // 6 chunks (6 * 16 blocks radius)
+    // Config dynamic properties
+    private static Map<ResourceLocation, ResourceLocation> dynamicReplaceMap = null;
+    private static long lastConfigRead = 0;
+    private static final int[][] cornerCoords = {{-2, 0}, {0, -2}, {2, 0}, {0, 2}};
 
-    private int currentRadius = 0;
-    private int currentPerimeterIndex = 0;
-    private int currentY = 0; 
-    
     public boolean isFormed = false;
+    private int tickCounter = 0;
+    private int scanY = -16;
     
     public WinterCoreBlockEntity(BlockPos pos, BlockState state) {
         super(WinterCoreBlocks.WINTER_CORE_BE.get(), pos, state);
@@ -41,7 +44,6 @@ public class WinterCoreBlockEntity extends BlockEntity {
     @Override
     public void onLoad() {
         super.onLoad();
-        // Delay adding to active cores until multiblock is verified on tick
     }
 
     @Override
@@ -74,6 +76,29 @@ public class WinterCoreBlockEntity extends BlockEntity {
         }
     }
 
+    @Override
+    public AABB getRenderBoundingBox() {
+        return new AABB(worldPosition).inflate(100.0, 300.0, 100.0);
+    }
+
+    public static void clientTick(Level level, BlockPos pos, BlockState state, WinterCoreBlockEntity blockEntity) {
+        if (!blockEntity.isFormed) return;
+        
+        // Spawn massive snowstorms if config allows
+        if (WinterCoreConfig.COMMON.renderSnow.get()) {
+            net.minecraft.client.player.LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
+            int radius = WinterCoreConfig.COMMON.effectRadius.get();
+            if (player != null && player.distanceToSqr(pos.getX(), pos.getY(), pos.getZ()) <= radius * radius) {
+                for (int i = 0; i < 60; i++) {
+                    double px = player.getX() + level.random.nextGaussian() * 20;
+                    double pz = player.getZ() + level.random.nextGaussian() * 20;
+                    double py = player.getY() + 15 + level.random.nextFloat() * 15;
+                    level.addParticle(net.minecraft.core.particles.ParticleTypes.SNOWFLAKE, px, py, pz, 0, -0.05, 0);
+                }
+            }
+        }
+    }
+
     private void registerCore() {
         if (!ACTIVE_CORES.containsKey(level.dimension()) || !ACTIVE_CORES.get(level.dimension()).contains(getBlockPos())) {
             ACTIVE_CORES.computeIfAbsent(level.dimension(), k -> new HashSet<>()).add(getBlockPos());
@@ -86,43 +111,47 @@ public class WinterCoreBlockEntity extends BlockEntity {
         }
     }
 
-    public static void serverTick(Level level, BlockPos pos, BlockState state, WinterCoreBlockEntity e) {
-        // Only run structure check every 20 ticks to save performance
-        if (level.getGameTime() % 20 == 0) {
-             e.checkMultiblock();
-        }
-
-        if (!e.isFormed) return;
-
-        // Run conversion sweep efficiently across chunks over multiple ticks
-        e.processBlockConversionBatch();
+    public static void serverTick(Level level, BlockPos pos, BlockState state, WinterCoreBlockEntity blockEntity) {
+        if (blockEntity.tickCounter++ % 20 != 0) return;
         
-        // Every 4 seconds, pulse massive frost damage to infections
-        if (level.getGameTime() % 80 == 0) {
-            e.processEntityDamage();
+        if (blockEntity.checkMultiblock()) {
+            if (!blockEntity.isFormed) return;
+            blockEntity.processBlockConversion();
+            blockEntity.processEntityDamage();
         }
     }
 
-    private void checkMultiblock() {
-        if (level == null) return;
-        boolean formed = true;
+    private boolean checkMultiblock() {
+        if (level == null) return false;
+        
+        int[][] baseCoords = {
+            {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+            {2, 0}, {-2, 0}, {0, 2}, {0, -2}
+        };
+        boolean formed = level.getBlockState(worldPosition.below()).getBlock() == WinterCoreBlocks.WINTER_CORE_PEDESTAL.get() &&
+                         level.getBlockState(worldPosition.below(2)).getBlock() == WinterCoreBlocks.WINTER_CORE_BASE.get();
 
-        // Check 3x3 base directly underneath (-1 Y)
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                if (level.getBlockState(worldPosition.offset(dx, -1, dz)).getBlock() != WinterCoreBlocks.WINTER_CORE_BASE.get()) {
-                    formed = false;
-                    break;
-                }
+        for (int[] c : baseCoords) {
+            if (level.getBlockState(worldPosition.offset(c[0], -2, c[1])).getBlock() != WinterCoreBlocks.WINTER_CORE_BASE.get()) {
+                formed = false;
+                break;
             }
         }
 
-        // Check 4 pillars (corners at Y and Y+1)
         if (formed) {
-            int[][] corners = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
-            for (int[] corner : corners) {
-                if (level.getBlockState(worldPosition.offset(corner[0], 0, corner[1])).getBlock() != WinterCoreBlocks.WINTER_CORE_PILLAR.get()) formed = false;
-                if (level.getBlockState(worldPosition.offset(corner[0], 1, corner[1])).getBlock() != WinterCoreBlocks.WINTER_CORE_PILLAR.get()) formed = false;
+            for (int i = 0; i < 4; i++) {
+                int[] p = cornerCoords[i];
+                BlockPos p1 = worldPosition.offset(p[0], -1, p[1]);
+                BlockPos p2 = worldPosition.offset(p[0], 0, p[1]);
+
+                BlockState s1 = level.getBlockState(p1);
+                BlockState s2 = level.getBlockState(p2);
+
+                if (s1.getBlock() != WinterCoreBlocks.WINTER_CORE_PILLAR.get() || 
+                    s2.getBlock() != WinterCoreBlocks.WINTER_CORE_PILLAR.get()) {
+                    formed = false;
+                    break;
+                }
             }
         }
         
@@ -132,150 +161,137 @@ public class WinterCoreBlockEntity extends BlockEntity {
                registerCore();
                level.playSound(null, worldPosition, net.minecraft.sounds.SoundEvents.BEACON_ACTIVATE, net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 0.8f);
                
-               // Transform pillars into bent spikes
-               int cornerIndex = 0;
-               for (int[] corner : corners) {
-                   BlockPos p1 = worldPosition.offset(corner[0], 0, corner[1]);
-                   BlockPos p2 = worldPosition.offset(corner[0], 1, corner[1]);
+               for (int i = 0; i < 4; i++) {
+                   int cornerIndex = i;
+                   int[] p = cornerCoords[i];
+                   BlockPos p1 = worldPosition.offset(p[0], -1, p[1]);
+                   BlockPos p2 = worldPosition.offset(p[0], 0, p[1]);
+                   
                    level.setBlock(p1, level.getBlockState(p1).setValue(WinterCorePillarBlock.FORMED, true).setValue(WinterCorePillarBlock.CORNER, cornerIndex).setValue(WinterCorePillarBlock.IS_TOP, false), 3);
                    level.setBlock(p2, level.getBlockState(p2).setValue(WinterCorePillarBlock.FORMED, true).setValue(WinterCorePillarBlock.CORNER, cornerIndex).setValue(WinterCorePillarBlock.IS_TOP, true), 3);
-                   cornerIndex++;
                }
-               // Transform core
                level.setBlock(worldPosition, getBlockState().setValue(WinterCoreBlock.FORMED, true), 3);
+
+               // Grant Advancement "Pure Land" to the nearest player
+               net.minecraft.world.entity.player.Player nearest = level.getNearestPlayer(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, 20.0, false);
+               if (nearest instanceof net.minecraft.server.level.ServerPlayer serverPlayer && level.getServer() != null) {
+                   net.minecraft.advancements.Advancement advancement = level.getServer().getAdvancements().getAdvancement(new ResourceLocation("wintercore:pure_land"));
+                   if (advancement != null) {
+                       net.minecraft.advancements.AdvancementProgress progress = serverPlayer.getAdvancements().getOrStartProgress(advancement);
+                       for (String criterion : progress.getRemainingCriteria()) {
+                           serverPlayer.getAdvancements().award(advancement, criterion);
+                       }
+                   }
+               }
 
             } else {
                unregisterCore();
                level.playSound(null, worldPosition, net.minecraft.sounds.SoundEvents.BEACON_DEACTIVATE, net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 0.8f);
                
-               // Revert pillars
-               for (int[] corner : corners) {
-                   BlockPos p1 = worldPosition.offset(corner[0], 0, corner[1]);
-                   if (level.getBlockState(p1).getBlock() == WinterCoreBlocks.WINTER_CORE_PILLAR.get()) {
-                       level.setBlock(p1, level.getBlockState(p1).setValue(WinterCorePillarBlock.FORMED, false), 3);
-                   }
-                   BlockPos p2 = worldPosition.offset(corner[0], 1, corner[1]);
-                   if (level.getBlockState(p2).getBlock() == WinterCoreBlocks.WINTER_CORE_PILLAR.get()) {
-                       level.setBlock(p2, level.getBlockState(p2).setValue(WinterCorePillarBlock.FORMED, false), 3);
-                   }
-               }
+               this.revertMultiblock();
                level.setBlock(worldPosition, getBlockState().setValue(WinterCoreBlock.FORMED, false), 3);
             }
             this.setChanged();
         }
+        return formed;
     }
 
-    private int[] getPoint(int r, int index) {
-        if (r == 0) return new int[]{0, 0};
-        int sideLength = 2 * r;
-        if (index < sideLength) return new int[]{-r + index, -r}; 
-        index -= sideLength;
-        if (index < sideLength) return new int[]{r, -r + index}; 
-        index -= sideLength;
-        if (index < sideLength) return new int[]{r - index, r}; 
-        index -= sideLength;
-        return new int[]{-r, r - index}; 
-    }
-
-    /**
-     * Outward-expanding shockwave algorithm.
-     * Starts converting directly from the center radially outwards.
-     */
-    private void processBlockConversionBatch() {
-        if (level == null || level.isClientSide()) return;
-        
-        int minHeight = level.getMinBuildHeight();
-        int maxHeight = level.getMaxBuildHeight();
-        int heightRange = maxHeight - minHeight;
-
-        int stateChecks = 0;
-        int blocksChanged = 0;
-
-        while (stateChecks < 6000 && blocksChanged < 20) {
-            if (currentRadius > EFFECT_RADIUS) {
-                // Done expanding out to the edge. Restart from the center.
-                currentRadius = 0;
-                currentPerimeterIndex = 0;
-                currentY = 0;
-                break;
+    public void revertMultiblock() {
+        if (level == null) return;
+        for (int[] p : cornerCoords) {
+            BlockPos p1 = worldPosition.offset(p[0], -1, p[1]);
+            BlockPos p2 = worldPosition.offset(p[0], 0, p[1]);
+            
+            if (level.getBlockState(p1).getBlock() == WinterCoreBlocks.WINTER_CORE_PILLAR.get()) {
+                level.setBlock(p1, level.getBlockState(p1).setValue(WinterCorePillarBlock.FORMED, false), 3);
             }
+            if (level.getBlockState(p2).getBlock() == WinterCoreBlocks.WINTER_CORE_PILLAR.get()) {
+                level.setBlock(p2, level.getBlockState(p2).setValue(WinterCorePillarBlock.FORMED, false), 3);
+            }
+        }
+    }
 
-            int[] pt = getPoint(currentRadius, currentPerimeterIndex);
-            int dx = pt[0];
-            int dz = pt[1];
+    private void reloadReplacementMap() {
+        dynamicReplaceMap = new HashMap<>();
+        List<? extends String> cfg = WinterCoreConfig.COMMON.blockConversions.get();
+        for (String pair : cfg) {
+            String[] split = pair.split("\\|");
+            if (split.length == 2) {
+                dynamicReplaceMap.put(new ResourceLocation(split[0]), new ResourceLocation(split[1]));
+            }
+        }
+        lastConfigRead = System.currentTimeMillis();
+    }
 
-            // Ensure we strictly operate within a circle
-            if ((dx * dx + dz * dz) <= (EFFECT_RADIUS * EFFECT_RADIUS)) {
-                int x = worldPosition.getX() + dx;
-                int z = worldPosition.getZ() + dz;
-                int y = minHeight + currentY;
-                
-                BlockPos targetPos = new BlockPos(x, y, z);
-                
-                if (level.isLoaded(targetPos)) {
-                    BlockState targetState = level.getBlockState(targetPos);
-                    
-                    ResourceLocation registryName = ForgeRegistries.BLOCKS.getKey(targetState.getBlock());
-                    if (registryName != null && WinterCoreData.CONVERSION_MAP.containsKey(registryName)) {
-                        ResourceLocation toBlockLoc = WinterCoreData.CONVERSION_MAP.get(registryName);
-                        Block applyBlock = ForgeRegistries.BLOCKS.getValue(toBlockLoc);
-                        if (applyBlock != null) {
-                            level.setBlock(targetPos, applyBlock.defaultBlockState(), 3);
-                            blocksChanged++;
+    private void processBlockConversion() {
+        if (dynamicReplaceMap == null || System.currentTimeMillis() - lastConfigRead > 5000) {
+            reloadReplacementMap();
+        }
+
+        int radius = WinterCoreConfig.COMMON.effectRadius.get();
+        int rSq = radius * radius;
+        
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (dx * dx + dz * dz <= rSq) {
+                    BlockPos targetPos = worldPosition.offset(dx, scanY, dz);
+                    if (level.isLoaded(targetPos)) {
+                        BlockState targetState = level.getBlockState(targetPos);
+                        ResourceLocation blockId = ForgeRegistries.BLOCKS.getKey(targetState.getBlock());
+                        if (blockId != null && dynamicReplaceMap.containsKey(blockId)) {
+                            Block targetBlock = ForgeRegistries.BLOCKS.getValue(dynamicReplaceMap.get(blockId));
+                            if (targetBlock != net.minecraft.world.level.block.Blocks.AIR) {
+                                level.setBlockAndUpdate(targetPos, targetBlock.defaultBlockState());
+                            }
                         }
                     }
                 }
             }
-
-            stateChecks++;
-            
-            // Advance iterator: Trace Y height entirely before moving to the next spiral coordinate
-            currentY++;
-            if (currentY >= heightRange) {
-                currentY = 0;
-                currentPerimeterIndex++;
-                int perimeterSize = (currentRadius == 0) ? 1 : (8 * currentRadius);
-                if (currentPerimeterIndex >= perimeterSize) {
-                    currentPerimeterIndex = 0;
-                    currentRadius++;
-                }
-            }
+        }
+        
+        scanY++;
+        if (scanY > 16) {
+            scanY = -16;
         }
     }
 
     private void processEntityDamage() {
         if (level == null) return;
         
-        // Massive AABB encompassing 96 block radius to kill entities
-        AABB aabb = new AABB(worldPosition).inflate(EFFECT_RADIUS, level.getMaxBuildHeight() - level.getMinBuildHeight(), EFFECT_RADIUS);
+        int radius = WinterCoreConfig.COMMON.effectRadius.get();
+        double multiplier = WinterCoreConfig.COMMON.damageMultiplier.get();
+        AABB aabb = new AABB(worldPosition).inflate(radius);
         List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, aabb);
         
         for (LivingEntity entity : entities) {
-            ResourceLocation entityLoc = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
-            if (entityLoc != null && entityLoc.getNamespace().equals("spore")) {
+            double dx = entity.getX() - worldPosition.getX();
+            double dz = entity.getZ() - worldPosition.getZ();
+            if ((dx * dx + dz * dz) <= (radius * radius)) {
                 
-                // Directly check distancing
-                double dx = entity.getX() - worldPosition.getX();
-                double dz = entity.getZ() - worldPosition.getZ();
-                if ((dx * dx + dz * dz) <= (EFFECT_RADIUS * EFFECT_RADIUS)) {
+                // Add Weakness and Slowness to Hostile Monsters
+                if (entity instanceof net.minecraft.world.entity.monster.Monster) {
+                    entity.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 100, 1, false, true));
+                    entity.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, 100, 1, false, true));
+                }
+                
+                String entityId = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType()).toString();
+                if (entityId.contains("spore:") || entityId.contains("flesh_that_hates")) {
+                    float baseDamage = 3.0F * (float)multiplier;
+                    entity.hurt(level.damageSources().magic(), baseDamage);
                     
-                    // Apply heavy debuffs: Slowness IV (amp 3) and Weakness III (amp 2) for 5 seconds (100 ticks)
-                    // (The pulse hits every 4 seconds, so the debuff will be permanent as long as they stay inside)
-                    entity.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 100, 3, false, true));
-                    entity.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, 100, 2, false, true));
-
                     if (entity.getType().is(EntityTypeTags.FREEZE_HURTS_EXTRA_TYPES)) {
-                        // Max out the freeze bar visually and physically
                         entity.setTicksFrozen(entity.getTicksFrozen() + 600);
-                        // Massive damage to freeze-vulnerable targets (40 damage = 20 hearts per 4 seconds)
-                        entity.hurt(level.damageSources().freeze(), 40.0f); 
-                    } else {
-                        // Very high generic magic damage (20 damage = 10 hearts per 4 seconds)
-                        entity.hurt(level.damageSources().magic(), 20.0f);
+                        entity.hurt(level.damageSources().freeze(), 10.0f * (float)multiplier); 
+                    }
+                    
+                    // Visual frost on entity
+                    if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                        serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.SNOWFLAKE,
+                                entity.getX(), entity.getY() + 1.0, entity.getZ(),
+                                5, 0.2, 0.5, 0.2, 0.0);
                     }
                     
                     // Specific hardcoded entity deletion if they are small/particles like Scent or Tendril
-                    // Using simple class names as a duck-typing fallback to avoid deep dependency wiring here
                     String name = entity.getClass().getSimpleName();
                     if (name.equals("ScentEntity") || name.equals("InfectionTendril")) {
                         entity.discard();

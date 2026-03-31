@@ -50,13 +50,31 @@ repositories {
         name = 'Sponge / Mixin'
         url = 'https://repo.spongepowered.org/repository/maven-public/'
     }
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content {
+            includeGroup "maven.modrinth"
+        }
+    }
+    maven {
+        name = "Jared's maven"
+        url = "https://maven.blamejared.com/"
+    }
+    maven {
+        name = "ModMaven"
+        url = "https://modmaven.dev"
+    }
+    maven {
+        url "https://maven.snowie.dev/"
+    }
 }
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     
-    // Add Spore mod as dependency for testing if placed in libs folder, but our current implementation uses String decoupled Spore features natively or generic reflections.
-    // If testing in the dev environment, compileOnly can be used if you compile the spore jar.
+    // We fetch a clean copy of the Spore mod from Modrinth to ensure mapping metadata (tsrg) is intact
+    implementation fg.deobf("maven.modrinth:fungal-infectionspore:2.2.0")
 }
 
 tasks.named('processResources', ProcessResources).configure {

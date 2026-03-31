@@ -1,0 +1,19 @@
+{
+  "display": {
+    "icon": {
+      "item": "wintercore:winter_core"
+    },
+    "title": "【净土】",
+    "description": "亲手点燃凛冬的核心，让这片被腐化的土地在冰雪中沉寂。",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "minecraft:story/root",
+  "criteria": {
+    "activate_core": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
