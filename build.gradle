@@ -75,6 +75,10 @@ dependencies {
     
     // We fetch a clean copy of the Spore mod from Modrinth to ensure mapping metadata (tsrg) is intact
     implementation fg.deobf("maven.modrinth:fungal-infectionspore:2.2.0")
+
+    // Create mod - soft/optional dependency for Ponder tutorial support.
+    // compileOnly = compile against the API but don't bundle; players need Create installed to see Ponder scenes.
+    compileOnly fg.deobf("com.simibubi.create:create-1.20.1:0.5.1.f:all")
 }
 
 tasks.named('processResources', ProcessResources).configure {

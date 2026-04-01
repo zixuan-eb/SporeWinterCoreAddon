@@ -7,8 +7,14 @@
   "advancement.wintercore.fimbulwinter.title": "Fimbulwinter",
   "advancement.wintercore.fimbulwinter.desc": "Construct and activate the ultimate zero-absolute suppression device",
   "tooltip.wintercore.winter_core.line1": "Requires a full multiblock structure to activate",
-  "tooltip.wintercore.winter_core.line2": "Place on Pedestal, surround with Stone & Pillars",
+  "tooltip.wintercore.winter_core.line2": "Place on Pedestal, surround with Stones & Pillars",
   "tooltip.wintercore.winter_core_base": "Forms the foundation platform of the Fimbulwinter structure",
   "tooltip.wintercore.winter_core_pedestal": "Channel pillar energy upward to the Core",
-  "tooltip.wintercore.winter_core_pillar": "Place two at each of the four corners of the structure"
+  "tooltip.wintercore.winter_core_pillar": "Place two at each of the four cardinal directions",
+  "ponder.wintercore.winter_core_assembly": "Assembling the Fimbulwinter Core",
+  "ponder.wintercore.winter_core_assembly.step1": "Lay 9 Fimbulwinter Stones in a cross pattern — 4 in each cardinal direction from center",
+  "ponder.wintercore.winter_core_assembly.step2": "Place the Fimbulwinter Pedestal at the very center on top of the base",
+  "ponder.wintercore.winter_core_assembly.step3": "Erect two Fimbulwinter Pillars at each of the four cardinal positions",
+  "ponder.wintercore.winter_core_assembly.step4": "Set the Winter Core on top of the Pedestal to complete the structure",
+  "ponder.wintercore.winter_core_assembly.activated": "The Fimbulwinter Core is now active — it will purify infections within its radius"
 }
