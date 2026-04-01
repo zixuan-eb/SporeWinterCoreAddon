@@ -31,7 +31,7 @@ public class WinterCorePonderStructureProvider implements DataProvider {
     @Override
     public CompletableFuture<?> run(CachedOutput cache) {
         Path path = output.getOutputFolder(PackOutput.Target.RESOURCE_PACK)
-                .resolve("assets/" + WinterCoreAddon.MODID + "/ponder/winter_core_assembly.nbt");
+                .resolve(WinterCoreAddon.MODID + "/ponder/winter_core_assembly.nbt");
 
         return CompletableFuture.runAsync(() -> {
             try {
@@ -40,11 +40,9 @@ public class WinterCorePonderStructureProvider implements DataProvider {
                 NbtIo.writeCompressed(nbt, baos);
                 byte[] bytes = baos.toByteArray();
 
-                Files.createDirectories(path.getParent());
-                // 简单判断：若内容未变则跳过写入
-                if (!Files.exists(path) || !java.util.Arrays.equals(Files.readAllBytes(path), bytes)) {
-                    Files.write(path, bytes);
-                }
+                @SuppressWarnings("deprecation")
+                com.google.common.hash.HashCode hashCode = com.google.common.hash.Hashing.sha1().hashBytes(bytes);
+                cache.writeIfNeeded(path, bytes, hashCode);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to generate ponder structure NBT", e);
             }

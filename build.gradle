@@ -40,6 +40,22 @@ minecraft {
             property 'forge.enabledGameTestNamespaces', mod_id
             args '--nogui'
         }
+
+        data {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+
+            args '--mod', mod_id, '--all',
+                 '--output', file('src/generated/resources/'),
+                 '--existing', file('src/main/resources/')
+
+            mods {
+                "${mod_id}" {
+                    source sourceSets.main
+                }
+            }
+        }
     }
 }
 
@@ -68,6 +84,10 @@ repositories {
     maven {
         url "https://maven.snowie.dev/"
     }
+    maven {
+        name = "Create Maven"
+        url = "https://maven.createmod.net/"
+    }
 }
 
 dependencies {
@@ -77,8 +97,10 @@ dependencies {
     implementation fg.deobf("maven.modrinth:fungal-infectionspore:2.2.0")
 
     // Create mod - soft/optional dependency for Ponder tutorial support.
-    // compileOnly = compile against the API but don't bundle; players need Create installed to see Ponder scenes.
-    compileOnly fg.deobf("com.simibubi.create:create-1.20.1:0.5.1.f:all")
+    // Use Modrinth for Create to avoid classifier maven resolution issues,
+    // and explicitly fetch Ponder library since it was split in 6.0
+    compileOnly fg.deobf("maven.modrinth:create:1.20.1-6.0.6")
+    compileOnly fg.deobf("net.createmod.ponder:Ponder-Forge-1.20.1:1.0.92")
 }
 
 tasks.named('processResources', ProcessResources).configure {
