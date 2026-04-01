@@ -35,7 +35,17 @@ public class WinterCoreBlockEntity extends BlockEntity {
 
     public boolean isFormed = false;
     private int tickCounter = 0;
-    private int scanY = -16;
+    private int scanY = Integer.MIN_VALUE; // 哨兵值，首次使用时重置到世界最低点
+    private int scanX = 0;
+    private int scanZ = 0;
+
+    // 净化波半径：从 0 缓慢增长到 effectRadius，形成从核心向外蔓延的净化效果
+    private float waveRadius = 0f;
+    private static final float WAVE_GROWTH_PER_SECOND = 0.5f; // 每秒扩展 0.5 格（radius=96 时约 3.2 分钟铺满）
+
+    // 光波环动画：伤害触发后环形粒子从内向外扩散淡出
+    private int waveAnimTicks = 0;
+    private static final int WAVE_ANIM_DURATION = 25; // 动画总帧数（25 tick ≈ 1.25 秒）
     
     public WinterCoreBlockEntity(BlockPos pos, BlockState state) {
         super(WinterCoreBlocks.WINTER_CORE_BE.get(), pos, state);
@@ -50,12 +60,14 @@ public class WinterCoreBlockEntity extends BlockEntity {
     protected void saveAdditional(net.minecraft.nbt.CompoundTag tag) {
         super.saveAdditional(tag);
         tag.putBoolean("IsFormed", this.isFormed);
+        tag.putFloat("WaveRadius", this.waveRadius);
     }
 
     @Override
     public void load(net.minecraft.nbt.CompoundTag tag) {
         super.load(tag);
         this.isFormed = tag.getBoolean("IsFormed");
+        this.waveRadius = tag.getFloat("WaveRadius");
     }
 
     @Override
@@ -112,13 +124,56 @@ public class WinterCoreBlockEntity extends BlockEntity {
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, WinterCoreBlockEntity blockEntity) {
-        if (blockEntity.tickCounter++ % 20 != 0) return;
-        
+        blockEntity.tickCounter++;
+
+        // 每 tick：更新光波环动画（不受 20tick 节流影响，确保动画流畅）
+        if (blockEntity.isFormed && blockEntity.waveAnimTicks > 0
+                && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            blockEntity.updateWaveAnimation(serverLevel);
+        }
+
+        // 每 20 tick（约 1 秒）：结构检测 + 方块净化 + 实体伤害
+        if (blockEntity.tickCounter % 20 != 0) return;
+
         if (blockEntity.checkMultiblock()) {
             if (!blockEntity.isFormed) return;
             blockEntity.processBlockConversion();
+            // 造成伤害后触发一次新的光波环动画
             blockEntity.processEntityDamage();
+            if (blockEntity.waveAnimTicks <= 0) {
+                blockEntity.waveAnimTicks = WAVE_ANIM_DURATION;
+            }
         }
+    }
+
+    /**
+     * 光波环动画：END_ROD 粒子从核心中心向外扩散，粒子数随半径增大而减少，
+     * 形成「从内向外慢慢淡出」的光环效果。每 tick 调用一次。
+     */
+    private void updateWaveAnimation(net.minecraft.server.level.ServerLevel serverLevel) {
+        // progress = 0（动画刚开始，环在核心处）→ 1（动画结束，环在外缘）
+        float progress = 1f - (waveAnimTicks / (float) WAVE_ANIM_DURATION);
+        float ringR = progress * 5.5f;                              // 环半径：0 → 5.5 格
+        int count = Math.max(6, (int) (40 * (1f - progress * 0.87f))); // 粒子数：40 → 6（淡出）
+
+        double cx = worldPosition.getX() + 0.5;
+        double cy = worldPosition.getY() + 0.5 + 0.15 + progress * 0.4; // 随扩散轻微上浮
+        double cz = worldPosition.getZ() + 0.5;
+
+        for (int i = 0; i < count; i++) {
+            double angle = (2.0 * Math.PI * i) / count;
+            double x = cx + Math.cos(angle) * ringR;
+            double z = cz + Math.sin(angle) * ringR;
+            // END_ROD：白色发光点，贴合凛冬/魔法主题
+            serverLevel.sendParticles(
+                    net.minecraft.core.particles.ParticleTypes.END_ROD,
+                    x, cy, z,
+                    1,        // 粒子数
+                    0.0, 0.03, 0.0, // 极小速度，只让粒子轻微上飘
+                    0.0       // speed（保持 0 让位置精准）
+            );
+        }
+        waveAnimTicks--;
     }
 
     private boolean checkMultiblock() {
@@ -172,10 +227,10 @@ public class WinterCoreBlockEntity extends BlockEntity {
                }
                level.setBlock(worldPosition, getBlockState().setValue(WinterCoreBlock.FORMED, true), 3);
 
-               // Grant Advancement "Pure Land" to the nearest player
+               // Grant Advancement "Fimbulwinter" to the nearest player
                net.minecraft.world.entity.player.Player nearest = level.getNearestPlayer(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, 20.0, false);
                if (nearest instanceof net.minecraft.server.level.ServerPlayer serverPlayer && level.getServer() != null) {
-                   net.minecraft.advancements.Advancement advancement = level.getServer().getAdvancements().getAdvancement(new ResourceLocation("wintercore:pure_land"));
+                   net.minecraft.advancements.Advancement advancement = level.getServer().getAdvancements().getAdvancement(new ResourceLocation("wintercore:fimbulwinter"));
                    if (advancement != null) {
                        net.minecraft.advancements.AdvancementProgress progress = serverPlayer.getAdvancements().getOrStartProgress(advancement);
                        for (String criterion : progress.getRemainingCriteria()) {
@@ -187,7 +242,9 @@ public class WinterCoreBlockEntity extends BlockEntity {
             } else {
                unregisterCore();
                level.playSound(null, worldPosition, net.minecraft.sounds.SoundEvents.BEACON_DEACTIVATE, net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 0.8f);
-               
+               // 结构解散时重置净化波，下次重新激活时从核心重新扩散
+               this.waveRadius = 0f;
+               this.scanX = 0; this.scanZ = 0; this.scanY = Integer.MIN_VALUE;
                this.revertMultiblock();
                level.setBlock(worldPosition, getBlockState().setValue(WinterCoreBlock.FORMED, false), 3);
             }
@@ -230,28 +287,132 @@ public class WinterCoreBlockEntity extends BlockEntity {
 
         int radius = WinterCoreConfig.COMMON.effectRadius.get();
         int rSq = radius * radius;
-        
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                if (dx * dx + dz * dz <= rSq) {
-                    BlockPos targetPos = worldPosition.offset(dx, scanY, dz);
-                    if (level.isLoaded(targetPos)) {
-                        BlockState targetState = level.getBlockState(targetPos);
-                        ResourceLocation blockId = ForgeRegistries.BLOCKS.getKey(targetState.getBlock());
-                        if (blockId != null && dynamicReplaceMap.containsKey(blockId)) {
-                            Block targetBlock = ForgeRegistries.BLOCKS.getValue(dynamicReplaceMap.get(blockId));
-                            if (targetBlock != net.minecraft.world.level.block.Blocks.AIR) {
-                                level.setBlockAndUpdate(targetPos, targetBlock.defaultBlockState());
+        int worldMinY = level.getMinBuildHeight();
+        int worldMaxY = level.getMaxBuildHeight() - 1;
+
+        // 每秒推进净化波前沿（从核心向外缓慢扩散）
+        if (waveRadius < radius) {
+            waveRadius = Math.min(radius, waveRadius + WAVE_GROWTH_PER_SECOND);
+            this.setChanged(); // 半径变化时通知存档
+        }
+        int activeRadius = (int) Math.ceil(waveRadius);
+        int activeRSq = activeRadius * activeRadius;
+
+        // 安全钳：坐标必须在当前 activeRadius 与世界高度范围内
+        if (scanZ < -activeRadius || scanZ > activeRadius) { scanZ = -activeRadius; }
+        if (scanY < worldMinY || scanY > worldMaxY) { scanY = worldMinY; }
+
+        // 根据当前 scanZ 预算出有效 X 半跨度，并约束 scanX
+        int xHalf = (int) Math.sqrt(activeRSq - (long) scanZ * scanZ);
+        if (scanX < -xHalf || scanX > xHalf) { scanX = -xHalf; }
+
+        int checks = 0;
+        int maxChecksPerTick = 20000; // 每 tick 最多处理有效方块数（无空转浪费）
+
+        while (checks < maxChecksPerTick) {
+            // scanX 已保证在 [-xHalf, xHalf] 内，即必然在圆柱体内，无需再判断 XZ 距离
+            BlockPos targetPos = worldPosition.offset(scanX, scanY, scanZ);
+            if (level.isLoaded(targetPos)) {
+                BlockState state = level.getBlockState(targetPos);
+
+                // 1. Spore's removable foliage (e.g., infected grass, eyes)
+                if (state.is(net.minecraft.tags.TagKey.create(ForgeRegistries.BLOCKS.getRegistryKey(), new ResourceLocation("spore", "removable_foliage")))) {
+                    level.removeBlock(targetPos, false);
+                } else {
+                    boolean converted = false;
+
+                    // 2. CDU Native Conversion Data (The JSON data inside Spore itself)
+                    Block targetBlock = com.Harbinger.Spore.ExtremelySusThings.CustomJsonReader.SporeCduConversionData.getResult(state.getBlock());
+                    if (targetBlock != null) {
+                        BlockState newState = targetBlock.defaultBlockState();
+                        for (Map.Entry<net.minecraft.world.level.block.state.properties.Property<?>, Comparable<?>> entry : state.getValues().entrySet()) {
+                            net.minecraft.world.level.block.state.properties.Property<?> property = newState.getBlock().getStateDefinition().getProperty(entry.getKey().getName());
+                            if (property != null) {
+                                try {
+                                    newState = newState.setValue((net.minecraft.world.level.block.state.properties.Property) property, (Comparable) entry.getValue());
+                                } catch (Exception ignored) {}
                             }
+                        }
+                        level.setBlockAndUpdate(targetPos, newState);
+                        converted = true;
+                    }
+
+                    // 3. Spore Hardcoded Custom Blocks (Bile -> Crusted Bile, Membrane -> Burned Biomass, etc)
+                    if (!converted) {
+                        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+                        if (id != null && id.getNamespace().equals("spore")) {
+                            String path = id.getPath();
+                            if (path.equals("remains")) {
+                                level.setBlockAndUpdate(targetPos, ForgeRegistries.BLOCKS.getValue(new ResourceLocation("spore", "frozen_remains")).defaultBlockState());
+                                converted = true;
+                            } else if (path.equals("bile")) {
+                                level.setBlockAndUpdate(targetPos, ForgeRegistries.BLOCKS.getValue(new ResourceLocation("spore", "crusted_bile")).defaultBlockState());
+                                converted = true;
+                            } else if (path.equals("membrane_block") || path.contains("biomass")) {
+                                level.setBlockAndUpdate(targetPos, ForgeRegistries.BLOCKS.getValue(new ResourceLocation("spore", "frost_burned_biomass")).defaultBlockState());
+                                converted = true;
+                            }
+                        }
+                    }
+
+                    // 4. Our own dynamic Replace Map from Config (as a final catch-all)
+                    if (!converted) {
+                        ResourceLocation blockId = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+                        if (blockId != null && dynamicReplaceMap.containsKey(blockId)) {
+                            Block finalTarget = ForgeRegistries.BLOCKS.getValue(dynamicReplaceMap.get(blockId));
+                            if (finalTarget != net.minecraft.world.level.block.Blocks.AIR) {
+                                level.setBlockAndUpdate(targetPos, finalTarget.defaultBlockState());
+                                converted = true;
+                            }
+                        }
+                    }
+
+                    // 5. Native Snow Layering (Ambient Blizzards and Immediate Purge Frosting)
+                    if (WinterCoreConfig.COMMON.renderSnow.get()) {
+                        BlockState above = level.getBlockState(targetPos.above());
+                        boolean canSeeSky = level.canSeeSkyFromBelowWater(targetPos.above());
+
+                        // Immediately frost over purged blocks, or slowly coat naked vanilla plain blocks outdoors
+                        if (above.isAir() && state.isSolidRender(level, targetPos)) {
+                            if (converted) {
+                                level.setBlockAndUpdate(targetPos.above(), net.minecraft.world.level.block.Blocks.SNOW.defaultBlockState().setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, level.random.nextInt(1, 3)));
+                            } else if (canSeeSky && level.random.nextInt(8) == 0) {
+                                level.setBlockAndUpdate(targetPos.above(), net.minecraft.world.level.block.Blocks.SNOW.defaultBlockState().setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, 1));
+                            }
+                        }
+                        // Dynamically accumulate deeper snowpiles over time (ONLY OUTDOORS)
+                        else if (above.getBlock() == net.minecraft.world.level.block.Blocks.SNOW && canSeeSky) {
+                            if (level.random.nextInt(40) == 0) {
+                                int layers = above.getValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS);
+                                if (layers < 4) {
+                                    level.setBlockAndUpdate(targetPos.above(), above.setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, layers + 1));
+                                }
+                            }
+                        }
+                        // Deep freeze water into ice (ONLY OUTDOORS)
+                        else if (above.getBlock() == net.minecraft.world.level.block.Blocks.WATER && canSeeSky && level.random.nextInt(10) == 0) {
+                            level.setBlockAndUpdate(targetPos.above(), net.minecraft.world.level.block.Blocks.ICE.defaultBlockState());
                         }
                     }
                 }
             }
-        }
-        
-        scanY++;
-        if (scanY > 16) {
-            scanY = -16;
+
+            checks++;
+
+            // 推进 scanX；当前 Z 列扫完后移至下一个有效 Z，并重新计算 xHalf
+            scanX++;
+            if (scanX > xHalf) {
+                scanZ++;
+                if (scanZ > activeRadius) {
+                    scanZ = -activeRadius;
+                    scanY++;
+                    if (scanY > worldMaxY) {
+                        scanY = worldMinY;
+                    }
+                }
+                xHalf = (int) Math.sqrt(Math.max(0, activeRSq - (long) scanZ * scanZ));
+                scanX = -xHalf;
+            }
         }
     }
 

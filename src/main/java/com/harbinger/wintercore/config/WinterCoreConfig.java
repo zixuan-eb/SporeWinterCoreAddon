@@ -25,7 +25,7 @@ public class WinterCoreConfig {
         public Common(ForgeConfigSpec.Builder builder) {
             builder.push("general");
             
-            effectRadius = builder.comment("Radius of the Winter Core's effect").define("effectRadius", 32);
+            effectRadius = builder.comment("Radius of the Winter Core's effect (in blocks, default = 6 chunks = 96 blocks)").define("effectRadius", 96);
             
             damageMultiplier = builder.comment("Damage multiplier against hostile monsters within the radius").define("damageMultiplier", 5.0);
             

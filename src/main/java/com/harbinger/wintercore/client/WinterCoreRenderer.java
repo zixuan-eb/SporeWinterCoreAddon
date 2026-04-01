@@ -17,6 +17,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
 
     private static final ResourceLocation MAGIC_CIRCLE = new ResourceLocation("wintercore", "textures/effect/magic_circle.png");
     private static final ResourceLocation MAGIC_BEAM = new ResourceLocation("wintercore", "textures/effect/magic_beam.png");
+    private static final ResourceLocation PULSE_WAVE = new ResourceLocation("wintercore", "textures/effect/pulse_wave.png");
 
     public WinterCoreRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -97,6 +98,37 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         float innerWidth = 0.6f;
         drawVolumetricBeam(beamBuilder, poseStack, innerWidth, beamHeight, maxLight);
         poseStack.popPose();
+
+        // 5. Pulse Wave Rings —— 三层同心光环每秒从核心向外扩散淡出
+        // 纯客户端时间驱动（gameTime % 20），无需服务端同步
+        float pulseProgress = ((time % 20L) + partialTick) / 20.0f; // 0→1，每秒一次
+        VertexConsumer pulseBuilder = bufferSource.getBuffer(RenderType.entityTranslucent(PULSE_WAVE));
+
+        // Layer A — 内圈急速爆发：0→1 仅用 0.5s，小而亮，带额外旋转冲量
+        float aP = Math.min(1f, pulseProgress * 2f);
+        poseStack.pushPose();
+        poseStack.translate(0.5D, -0.93f + aP * 0.15, 0.5D);
+        poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 0.5f + aP * 45f)); // 旋转冲量
+        poseStack.mulPose(Axis.XP.rotationDegrees(90f));
+        drawTexturedQuadWithAlpha(pulseBuilder, poseStack, aP * 9.5f, aP * 9.5f, maxLight, (int)(220 * (1f - aP)));
+        poseStack.popPose();
+
+        // Layer B — 中环匀速扩散：完整 1s，反向缓转
+        poseStack.pushPose();
+        poseStack.translate(0.5D, -0.95f + pulseProgress * 0.25, 0.5D);
+        poseStack.mulPose(Axis.YP.rotationDegrees(angleY * 0.25f));
+        poseStack.mulPose(Axis.XP.rotationDegrees(90f));
+        drawTexturedQuadWithAlpha(pulseBuilder, poseStack, pulseProgress * 15f, pulseProgress * 15f, maxLight, (int)(160 * (1f - pulseProgress)));
+        poseStack.popPose();
+
+        // Layer C — 外环延迟追踪：0.25s 后才开始，幅度最大，轻微反转
+        float cP = Math.max(0f, (pulseProgress - 0.25f) / 0.75f);
+        poseStack.pushPose();
+        poseStack.translate(0.5D, -0.95f + cP * 0.35, 0.5D);
+        poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 0.1f));
+        poseStack.mulPose(Axis.XP.rotationDegrees(90f));
+        drawTexturedQuadWithAlpha(pulseBuilder, poseStack, cP * 22f, cP * 22f, maxLight, (int)(110 * (1f - cP)));
+        poseStack.popPose();
     }
 
     private void drawVolumetricBeam(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light) {
@@ -107,6 +139,21 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
             drawVerticalBeamPlane(builder, matrixStack, width, height, light);
             matrixStack.popPose();
         }
+    }
+
+    /**
+     * 绘制支持动态透明度的纹理四边形（用于脉冲光环淡出效果）
+     */
+    private void drawTexturedQuadWithAlpha(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light, int alpha) {
+        if (alpha <= 0) return;
+        var pose = matrixStack.last().pose();
+        var normal = matrixStack.last().normal();
+        float hw = width / 2.0f;
+        float hh = height / 2.0f;
+        builder.vertex(pose, -hw, hh, 0).color(255, 255, 255, alpha).uv(0, 1).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 0, 1).endVertex();
+        builder.vertex(pose, hw, hh, 0).color(255, 255, 255, alpha).uv(1, 1).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 0, 1).endVertex();
+        builder.vertex(pose, hw, -hh, 0).color(255, 255, 255, alpha).uv(1, 0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 0, 1).endVertex();
+        builder.vertex(pose, -hw, -hh, 0).color(255, 255, 255, alpha).uv(0, 0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 0, 1).endVertex();
     }
 
     private void drawTexturedQuad(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light) {

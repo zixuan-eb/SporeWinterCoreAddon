@@ -3,5 +3,7 @@
   "block.wintercore.winter_core": "Winter Core",
   "block.wintercore.winter_core_base": "Fimbulwinter Stone",
   "block.wintercore.winter_core_pedestal": "Fimbulwinter Pedestal",
-  "block.wintercore.winter_core_pillar": "Fimbulwinter Pillar"
+  "block.wintercore.winter_core_pillar": "Fimbulwinter Pillar",
+  "advancement.wintercore.fimbulwinter.title": "Fimbulwinter",
+  "advancement.wintercore.fimbulwinter.desc": "Construct and activate the ultimate zero-absolute suppression device"
 }
