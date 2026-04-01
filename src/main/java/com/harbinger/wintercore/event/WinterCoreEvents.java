@@ -18,6 +18,7 @@ public class WinterCoreEvents {
 
     @SubscribeEvent
     public static void onCheckSpawn(MobSpawnEvent.PositionCheck event) {
+        if (!WinterCoreConfig.COMMON.preventSporeSpawns.get()) return;
         if (event.getEntity() != null) {
             ResourceLocation entityLoc = ForgeRegistries.ENTITY_TYPES.getKey(event.getEntity().getType());
             if (entityLoc != null && entityLoc.getNamespace().equals("spore")) {
@@ -31,6 +32,7 @@ public class WinterCoreEvents {
 
     @SubscribeEvent
     public static void onFinalizeSpawn(MobSpawnEvent.FinalizeSpawn event) {
+        if (!WinterCoreConfig.COMMON.preventSporeSpawns.get()) return;
         if (event.getEntity() != null) {
             ResourceLocation entityLoc = ForgeRegistries.ENTITY_TYPES.getKey(event.getEntity().getType());
             // Double layer of security against spawners or scripts bypassing PositionCheck

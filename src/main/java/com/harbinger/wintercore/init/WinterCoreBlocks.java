@@ -4,17 +4,24 @@ import com.harbinger.wintercore.WinterCoreAddon;
 import com.harbinger.wintercore.block.WinterCoreBlock;
 import com.harbinger.wintercore.block.WinterCoreBlockEntity;
 import com.harbinger.wintercore.block.WinterCorePillarBlock;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 public class WinterCoreBlocks {
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, WinterCoreAddon.MODID);
@@ -25,25 +32,46 @@ public class WinterCoreBlocks {
     public static final RegistryObject<Block> WINTER_CORE = BLOCKS.register("winter_core", WinterCoreBlock::new);
 
     public static final RegistryObject<Item> WINTER_CORE_ITEM = ITEMS.register("winter_core",
-            () -> new BlockItem(WINTER_CORE.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
+            () -> new BlockItem(WINTER_CORE.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)) {
+                @Override
+                public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+                    tooltip.add(Component.translatable("tooltip.wintercore.winter_core.line1").withStyle(ChatFormatting.AQUA));
+                    tooltip.add(Component.translatable("tooltip.wintercore.winter_core.line2").withStyle(ChatFormatting.DARK_AQUA));
+                }
+            });
 
-    public static final RegistryObject<Block> WINTER_CORE_BASE = BLOCKS.register("winter_core_base", 
+    public static final RegistryObject<Block> WINTER_CORE_BASE = BLOCKS.register("winter_core_base",
             () -> new Block(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops()));
-    
+
     public static final RegistryObject<Item> WINTER_CORE_BASE_ITEM = ITEMS.register("winter_core_base",
-            () -> new BlockItem(WINTER_CORE_BASE.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
+            () -> new BlockItem(WINTER_CORE_BASE.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)) {
+                @Override
+                public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+                    tooltip.add(Component.translatable("tooltip.wintercore.winter_core_base").withStyle(ChatFormatting.GRAY));
+                }
+            });
 
-    public static final RegistryObject<Block> WINTER_CORE_PEDESTAL = BLOCKS.register("winter_core_pedestal", 
+    public static final RegistryObject<Block> WINTER_CORE_PEDESTAL = BLOCKS.register("winter_core_pedestal",
             () -> new Block(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops()));
-    
-    public static final RegistryObject<Item> WINTER_CORE_PEDESTAL_ITEM = ITEMS.register("winter_core_pedestal",
-            () -> new BlockItem(WINTER_CORE_PEDESTAL.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
 
-    public static final RegistryObject<Block> WINTER_CORE_PILLAR = BLOCKS.register("winter_core_pillar", 
+    public static final RegistryObject<Item> WINTER_CORE_PEDESTAL_ITEM = ITEMS.register("winter_core_pedestal",
+            () -> new BlockItem(WINTER_CORE_PEDESTAL.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)) {
+                @Override
+                public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+                    tooltip.add(Component.translatable("tooltip.wintercore.winter_core_pedestal").withStyle(ChatFormatting.GRAY));
+                }
+            });
+
+    public static final RegistryObject<Block> WINTER_CORE_PILLAR = BLOCKS.register("winter_core_pillar",
             () -> new WinterCorePillarBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops().noOcclusion()));
-    
+
     public static final RegistryObject<Item> WINTER_CORE_PILLAR_ITEM = ITEMS.register("winter_core_pillar",
-            () -> new BlockItem(WINTER_CORE_PILLAR.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
+            () -> new BlockItem(WINTER_CORE_PILLAR.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)) {
+                @Override
+                public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+                    tooltip.add(Component.translatable("tooltip.wintercore.winter_core_pillar").withStyle(ChatFormatting.GRAY));
+                }
+            });
 
     public static final RegistryObject<BlockEntityType<WinterCoreBlockEntity>> WINTER_CORE_BE = BLOCK_ENTITIES.register("winter_core_be",
             () -> BlockEntityType.Builder.of(WinterCoreBlockEntity::new, WINTER_CORE.get()).build(null));

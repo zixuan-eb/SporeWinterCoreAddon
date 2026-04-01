@@ -61,6 +61,10 @@ public class WinterCoreBlockEntity extends BlockEntity {
         super.saveAdditional(tag);
         tag.putBoolean("IsFormed", this.isFormed);
         tag.putFloat("WaveRadius", this.waveRadius);
+        // 持久化扫描坐标，避免重载后从头扫
+        tag.putInt("ScanX", this.scanX);
+        tag.putInt("ScanZ", this.scanZ);
+        tag.putInt("ScanY", this.scanY == Integer.MIN_VALUE ? 0 : this.scanY);
     }
 
     @Override
@@ -68,6 +72,10 @@ public class WinterCoreBlockEntity extends BlockEntity {
         super.load(tag);
         this.isFormed = tag.getBoolean("IsFormed");
         this.waveRadius = tag.getFloat("WaveRadius");
+        this.scanX = tag.getInt("ScanX");
+        this.scanZ = tag.getInt("ScanZ");
+        // ScanY 为 0 时安全钳会在 processBlockConversion 中自动修正到 worldMinY
+        this.scanY = tag.contains("ScanY") ? tag.getInt("ScanY") : Integer.MIN_VALUE;
     }
 
     @Override
@@ -292,8 +300,13 @@ public class WinterCoreBlockEntity extends BlockEntity {
 
         // 每秒推进净化波前沿（从核心向外缓慢扩散）
         if (waveRadius < radius) {
+            boolean wasNotFull = waveRadius < radius;
             waveRadius = Math.min(radius, waveRadius + WAVE_GROWTH_PER_SECOND);
-            this.setChanged(); // 半径变化时通知存档
+            this.setChanged();
+            // 首次铺满：触发净化完成特效
+            if (wasNotFull && waveRadius >= radius && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                onPurificationComplete(serverLevel);
+            }
         }
         int activeRadius = (int) Math.ceil(waveRadius);
         int activeRSq = activeRadius * activeRadius;
@@ -461,4 +474,43 @@ public class WinterCoreBlockEntity extends BlockEntity {
             }
         }
     }
+
+    /**
+     * 净化波首次铺满最大半径时触发：音效 + 双层粒子爆发环，给予玩家明确的"净化完成"反馈。
+     */
+    private void onPurificationComplete(net.minecraft.server.level.ServerLevel serverLevel) {
+        // 共鸣音效：低沉的信标充能音，象征冰霜领域完全扩张
+        serverLevel.playSound(null, worldPosition,
+                net.minecraft.sounds.SoundEvents.BEACON_POWER_SELECT,
+                net.minecraft.sounds.SoundSource.BLOCKS, 2.5f, 0.55f);
+        // 略微延后的第二声（在上一声的回声感）
+        serverLevel.playSound(null, worldPosition,
+                net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_RESONATE,
+                net.minecraft.sounds.SoundSource.BLOCKS, 1.5f, 0.4f);
+
+        double cx = worldPosition.getX() + 0.5;
+        double cy = worldPosition.getY() + 0.5;
+        double cz = worldPosition.getZ() + 0.5;
+        int maxR = WinterCoreConfig.COMMON.effectRadius.get();
+
+        // 内圈爆发：核心周围螺旋上升的粒子柱
+        for (int i = 0; i < 60; i++) {
+            double angle = (2 * Math.PI * i) / 60;
+            double r = 1.0 + serverLevel.random.nextDouble() * 2.5;
+            double yOffset = serverLevel.random.nextDouble() * 3.0;
+            serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
+                    cx + Math.cos(angle) * r, cy + yOffset, cz + Math.sin(angle) * r,
+                    1, 0.0, 0.06, 0.0, 0.0);
+        }
+
+        // 外圈边界环：在最大半径处勾勒出完整的领域边界（仅地面高度）
+        int boundaryCount = Math.min(360, maxR * 4); // 半径越大，粒子越多
+        for (int i = 0; i < boundaryCount; i++) {
+            double angle = (2 * Math.PI * i) / boundaryCount;
+            serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
+                    cx + Math.cos(angle) * maxR, cy, cz + Math.sin(angle) * maxR,
+                    1, 0.0, 0.05, 0.0, 0.0);
+        }
+    }
 }
+

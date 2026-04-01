@@ -20,6 +20,7 @@ public class WinterCoreConfig {
         public final ForgeConfigSpec.ConfigValue<Integer> effectRadius;
         public final ForgeConfigSpec.ConfigValue<Double> damageMultiplier;
         public final ForgeConfigSpec.ConfigValue<Boolean> renderSnow;
+        public final ForgeConfigSpec.ConfigValue<Boolean> preventSporeSpawns;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> blockConversions;
 
         public Common(ForgeConfigSpec.Builder builder) {
@@ -30,6 +31,8 @@ public class WinterCoreConfig {
             damageMultiplier = builder.comment("Damage multiplier against hostile monsters within the radius").define("damageMultiplier", 5.0);
             
             renderSnow = builder.comment("Whether it should render a continuous snowstorm inside the radius").define("renderSnow", true);
+
+            preventSporeSpawns = builder.comment("Whether the Winter Core should prevent Spore mod entities from spawning within its radius").define("preventSporeSpawns", true);
             
             blockConversions = builder.comment("List of block conversions in the format 'modid:source_block|modid:target_block'")
                     .defineList("blockConversions", Arrays.asList(

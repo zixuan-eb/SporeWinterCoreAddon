@@ -1,9 +1,14 @@
 {
-  "itemGroup.winter_core_tab": "Fimbulwinter Core",
+  "itemGroup.winter_core": "Fimbulwinter Core",
   "block.wintercore.winter_core": "Winter Core",
   "block.wintercore.winter_core_base": "Fimbulwinter Stone",
   "block.wintercore.winter_core_pedestal": "Fimbulwinter Pedestal",
   "block.wintercore.winter_core_pillar": "Fimbulwinter Pillar",
   "advancement.wintercore.fimbulwinter.title": "Fimbulwinter",
-  "advancement.wintercore.fimbulwinter.desc": "Construct and activate the ultimate zero-absolute suppression device"
+  "advancement.wintercore.fimbulwinter.desc": "Construct and activate the ultimate zero-absolute suppression device",
+  "tooltip.wintercore.winter_core.line1": "Requires a full multiblock structure to activate",
+  "tooltip.wintercore.winter_core.line2": "Place on Pedestal, surround with Stone & Pillars",
+  "tooltip.wintercore.winter_core_base": "Forms the foundation platform of the Fimbulwinter structure",
+  "tooltip.wintercore.winter_core_pedestal": "Channel pillar energy upward to the Core",
+  "tooltip.wintercore.winter_core_pillar": "Place two at each of the four corners of the structure"
 }

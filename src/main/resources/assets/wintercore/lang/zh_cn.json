@@ -5,5 +5,10 @@
   "block.wintercore.winter_core_pedestal": "凛冬基座",
   "block.wintercore.winter_core_pillar": "凛冬石柱",
   "advancement.wintercore.fimbulwinter.title": "芬布尔凛冬",
-  "advancement.wintercore.fimbulwinter.desc": "成功组装并激活最终极寒镇压装置"
+  "advancement.wintercore.fimbulwinter.desc": "成功组装并激活最终极寒镇压装置",
+  "tooltip.wintercore.winter_core.line1": "需要完整的多方块结构才能激活",
+  "tooltip.wintercore.winter_core.line2": "放置于基座上，周围安装凛冬石与石柱",
+  "tooltip.wintercore.winter_core_base": "构成芬布尔凛冬多方块结构的基础平台",
+  "tooltip.wintercore.winter_core_pedestal": "将石柱能量向上传导至核心",
+  "tooltip.wintercore.winter_core_pillar": "在结构四角各竖立两块"
 }
