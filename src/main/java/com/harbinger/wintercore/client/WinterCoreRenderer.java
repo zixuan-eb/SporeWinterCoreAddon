@@ -46,7 +46,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
     @Override
     public void render(WinterCoreBlockEntity blockEntity, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         if (!blockEntity.isFormed || blockEntity.getLevel() == null) return;
-
+        
         BlockState state = blockEntity.getBlockState();
         long time = blockEntity.getLevel().getGameTime();
         
@@ -55,7 +55,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         float floatOffset = 0.75f + (float)Math.sin((time + partialTick) * 0.05f) * 0.15f;
         int maxLight = 15728880;
 
-        // 1. Crystal Core Mesh
+        // 1. Crystal Core Mesh (无论有没有电，成形了就渲染其悬浮状态及外壳的微弱发光)
         poseStack.pushPose();
         poseStack.translate(0.5D, floatOffset, 0.5D); 
         poseStack.mulPose(Axis.YP.rotationDegrees((time + partialTick) * 1.5f)); 
@@ -65,6 +65,8 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         Minecraft.getInstance().getBlockRenderer().renderSingleBlock(crystalState, poseStack, bufferSource, maxLight, packedOverlay, net.minecraftforge.client.model.data.ModelData.EMPTY, null);
         poseStack.popPose();
 
+        // 没电的话不渲染能量光束和风暴粒子特效
+        if (!blockEntity.isPowered) return;
         float angleY = (time + partialTick) * 3.0f; 
 
         // 2. Translucent Crystal Shell (Outer Holoram)

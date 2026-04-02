@@ -23,11 +23,25 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraftforge.common.extensions.IForgeMenuType;
+import com.harbinger.wintercore.block.WinterCoreBaseBlock;
+import com.harbinger.wintercore.item.WinterEnergyCellItem;
+import com.harbinger.wintercore.gui.WinterCoreMenu;
+
 public class WinterCoreBlocks {
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, WinterCoreAddon.MODID);
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, WinterCoreAddon.MODID);
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, WinterCoreAddon.MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, WinterCoreAddon.MODID);
+    public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(ForgeRegistries.MENU_TYPES, WinterCoreAddon.MODID);
+
+    public static final RegistryObject<MenuType<WinterCoreMenu>> WINTER_CORE_MENU = MENUS.register("winter_core_menu", 
+            () -> IForgeMenuType.create((windowId, inv, data) -> new WinterCoreMenu(windowId, inv, data.readBlockPos())));
+
+    public static final RegistryObject<Item> WINTER_ENERGY_CELL = ITEMS.register("winter_energy_cell",
+            () -> new WinterEnergyCellItem(new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
 
     public static final RegistryObject<Block> WINTER_CORE = BLOCKS.register("winter_core", WinterCoreBlock::new);
 
@@ -41,7 +55,7 @@ public class WinterCoreBlocks {
             });
 
     public static final RegistryObject<Block> WINTER_CORE_BASE = BLOCKS.register("winter_core_base",
-            () -> new Block(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops()));
+            () -> new WinterCoreBaseBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops()));
 
     public static final RegistryObject<Item> WINTER_CORE_BASE_ITEM = ITEMS.register("winter_core_base",
             () -> new BlockItem(WINTER_CORE_BASE.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)) {

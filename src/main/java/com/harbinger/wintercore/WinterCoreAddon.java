@@ -20,6 +20,7 @@ public class WinterCoreAddon {
         WinterCoreBlocks.BLOCKS.register(modEventBus);
         WinterCoreBlocks.ITEMS.register(modEventBus);
         WinterCoreBlocks.BLOCK_ENTITIES.register(modEventBus);
+        WinterCoreBlocks.MENUS.register(modEventBus);
         WinterCoreBlocks.CREATIVE_TABS.register(modEventBus);
 
         MinecraftForge.EVENT_BUS.register(this);

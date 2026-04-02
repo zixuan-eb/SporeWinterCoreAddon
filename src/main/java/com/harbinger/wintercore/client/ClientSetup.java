@@ -21,6 +21,8 @@ public class ClientSetup {
     public static void onClientSetup(FMLClientSetupEvent event) {
         // 仅当 Create 已加载时注册思索（Ponder）场景，避免硬依赖
         event.enqueueWork(() -> {
+            net.minecraft.client.gui.screens.MenuScreens.register(WinterCoreBlocks.WINTER_CORE_MENU.get(), com.harbinger.wintercore.gui.WinterCoreScreen::new);
+
             if (net.minecraftforge.fml.ModList.get().isLoaded("create")) {
                 WinterCorePonderCompat.init();
             }

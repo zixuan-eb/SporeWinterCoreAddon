@@ -23,7 +23,26 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class WinterCoreBlockEntity extends BlockEntity {
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.Nameable;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.energy.EnergyStorage;
+import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemStackHandler;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, Nameable {
 
     // Global registry of all active Winter Cores to quickly lookup blockspawn rules anywhere in the world.
     public static final Map<ResourceKey<Level>, Set<BlockPos>> ACTIVE_CORES = new ConcurrentHashMap<>();
@@ -34,10 +53,22 @@ public class WinterCoreBlockEntity extends BlockEntity {
     private static final int[][] cornerCoords = {{-2, 0}, {0, -2}, {2, 0}, {0, 2}};
 
     public boolean isFormed = false;
+    public boolean isPowered = false; // 同步到客户端的耗电状态
     private int tickCounter = 0;
     private int scanY = Integer.MIN_VALUE; // 哨兵值，首次使用时重置到世界最低点
     private int scanX = 0;
     private int scanZ = 0;
+
+    // FE Storage & GUI
+    public final ItemStackHandler itemHandler = new ItemStackHandler(1) {
+        @Override
+        protected void onContentsChanged(int slot) {
+            setChanged();
+        }
+    };
+    public final EnergyStorage energyStorage = new EnergyStorage(1000000, 10000, 10000, 0);
+    public final LazyOptional<IItemHandler> lazyItemHandler = LazyOptional.of(() -> itemHandler);
+    public final LazyOptional<IEnergyStorage> lazyEnergyHandler = LazyOptional.of(() -> energyStorage);
 
     // 净化波半径：从 0 缓慢增长到 effectRadius，形成从核心向外蔓延的净化效果
     private float waveRadius = 0f;
@@ -50,6 +81,40 @@ public class WinterCoreBlockEntity extends BlockEntity {
     }
 
     @Override
+    public Component getName() {
+        return Component.translatable("block.wintercore.winter_core");
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return getName();
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
+        return new com.harbinger.wintercore.gui.WinterCoreMenu(id, inventory, this);
+    }
+
+    @Override
+    public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
+        if (cap == ForgeCapabilities.ITEM_HANDLER) {
+            return lazyItemHandler.cast();
+        }
+        if (cap == ForgeCapabilities.ENERGY) {
+            return lazyEnergyHandler.cast();
+        }
+        return super.getCapability(cap, side);
+    }
+
+    @Override
+    public void invalidateCaps() {
+        super.invalidateCaps();
+        lazyItemHandler.invalidate();
+        lazyEnergyHandler.invalidate();
+    }
+
+    @Override
     public void onLoad() {
         super.onLoad();
     }
@@ -58,6 +123,9 @@ public class WinterCoreBlockEntity extends BlockEntity {
     protected void saveAdditional(net.minecraft.nbt.CompoundTag tag) {
         super.saveAdditional(tag);
         tag.putBoolean("IsFormed", this.isFormed);
+        tag.putBoolean("IsPowered", this.isPowered);
+        tag.put("Inventory", itemHandler.serializeNBT());
+        tag.putInt("Energy", energyStorage.getEnergyStored());
         tag.putFloat("WaveRadius", this.waveRadius);
         // 持久化扫描坐标，避免重载后从头扫
         tag.putInt("ScanX", this.scanX);
@@ -69,6 +137,17 @@ public class WinterCoreBlockEntity extends BlockEntity {
     public void load(net.minecraft.nbt.CompoundTag tag) {
         super.load(tag);
         this.isFormed = tag.getBoolean("IsFormed");
+        this.isPowered = tag.getBoolean("IsPowered");
+        if (tag.contains("Inventory")) {
+            itemHandler.deserializeNBT(tag.getCompound("Inventory"));
+        }
+        if (tag.contains("Energy")) {
+            try {
+                java.lang.reflect.Field energyField = EnergyStorage.class.getDeclaredField("energy");
+                energyField.setAccessible(true);
+                energyField.set(energyStorage, tag.getInt("Energy"));
+            } catch (Exception e) {}
+        }
         this.waveRadius = tag.getFloat("WaveRadius");
         this.scanX = tag.getInt("ScanX");
         this.scanZ = tag.getInt("ScanZ");
@@ -132,9 +211,36 @@ public class WinterCoreBlockEntity extends BlockEntity {
     public static void serverTick(Level level, BlockPos pos, BlockState state, WinterCoreBlockEntity blockEntity) {
         blockEntity.tickCounter++;
 
-        // 核心开启时，每 tick 执行大量方块扫描
-        if (blockEntity.isFormed) {
-             blockEntity.processBlockConversion();
+        // 尝试从槽位里的电池吸取能量
+        ItemStack battery = blockEntity.itemHandler.getStackInSlot(0);
+        if (!battery.isEmpty()) {
+            battery.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
+                int transferable = cap.extractEnergy(1000, true);
+                if (transferable > 0) {
+                    int accepted = blockEntity.energyStorage.receiveEnergy(transferable, false);
+                    cap.extractEnergy(accepted, false);
+                    blockEntity.setChanged();
+                }
+            });
+        }
+
+        // 常规每刻耗电：维持核心需要 5 FE / tick (100 FE/s)
+        boolean hasPower = blockEntity.energyStorage.getEnergyStored() >= 5;
+
+        // 同步状态到客户端渲染层
+        if (blockEntity.isPowered != hasPower) {
+            blockEntity.isPowered = hasPower;
+            level.sendBlockUpdated(pos, state, state, 3);
+        }
+
+        // 核心开启且有电时，每 tick 执行大量方块扫描
+        if (blockEntity.isFormed && hasPower) {
+            try {
+                java.lang.reflect.Field energyField = EnergyStorage.class.getDeclaredField("energy");
+                energyField.setAccessible(true);
+                energyField.set(blockEntity.energyStorage, blockEntity.energyStorage.getEnergyStored() - 5);
+            } catch (Exception e) {}
+            blockEntity.processBlockConversion();
         }
 
         // 每 20 tick（约 1 秒）：结构检测 + 实体伤害 + 推进半径
@@ -142,6 +248,7 @@ public class WinterCoreBlockEntity extends BlockEntity {
 
         if (blockEntity.checkMultiblock()) {
             if (!blockEntity.isFormed) return;
+            if (!hasPower) return; // 没电暂停一切特效散发与波幅推进
             
             // 每秒推进净化波前沿（从核心向外缓慢扩散）
             int radius = WinterCoreConfig.COMMON.effectRadius.get();
