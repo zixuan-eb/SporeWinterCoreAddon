@@ -20,6 +20,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
     private static final ResourceLocation MAGIC_CIRCLE = new ResourceLocation("wintercore", "textures/effect/magic_circle.png");
     private static final ResourceLocation MAGIC_BEAM = new ResourceLocation("wintercore", "textures/effect/magic_beam.png");
     private static final ResourceLocation PULSE_WAVE = new ResourceLocation("wintercore", "textures/effect/pulse_wave.png");
+    private static final ResourceLocation WINTER_STAR = new ResourceLocation("wintercore", "textures/effect/winter_star.png");
     public static class AdditiveRenderType extends RenderType {
         public AdditiveRenderType(String p_173178_, com.mojang.blaze3d.vertex.VertexFormat p_173179_, com.mojang.blaze3d.vertex.VertexFormat.Mode p_173180_, int p_173181_, boolean p_173182_, boolean p_173183_, Runnable p_173184_, Runnable p_173185_) {
             super(p_173178_, p_173179_, p_173180_, p_173181_, p_173182_, p_173183_, p_173184_, p_173185_);
@@ -102,7 +103,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         poseStack.popPose();
 
         // 4. Volumetric intersecting Custom Laser Beams
-        VertexConsumer beamBuilder = bufferSource.getBuffer(RenderType.entityTranslucentCull(MAGIC_BEAM));
+        VertexConsumer beamBuilder = bufferSource.getBuffer(AdditiveRenderType.getAdditive(MAGIC_BEAM));
         float beamHeight = 350f;
 
         // Big outer rotating laser core (12-way planar star = volumetric cylinder)
@@ -155,6 +156,50 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         float sizeC = cP * 160f; // 笼罩整个领域级别的天空波纹
         drawTexturedQuadWithAlpha(pulseBuilder, poseStack, sizeC, sizeC, maxLight, (int)(150 * (1f - cP)));
         poseStack.popPose();
+
+        // 6. Custom Converging "Winter Stars" Pseudo-Particles
+        org.joml.Quaternionf cameraRot = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
+        VertexConsumer starBuilder = bufferSource.getBuffer(AdditiveRenderType.getAdditive(WINTER_STAR));
+        int starCount = 80;
+        
+        for (int i = 0; i < starCount; i++) {
+            long seed = i * 314159265L ^ blockEntity.getBlockPos().asLong();
+            java.util.Random rand = new java.util.Random(seed);
+            
+            float startDist = 10f + rand.nextFloat() * 25f; // 起始距离核心 10~35 格
+            float speed = 0.1f + rand.nextFloat() * 0.4f;   // 汇聚速度
+            float currentDist = startDist - (((time + partialTick) * speed) % startDist);
+
+            if (currentDist < 0.2f) continue; // 吸入核心内部后不渲染
+
+            float theta = rand.nextFloat() * (float)Math.PI * 2f; 
+            float phi = (rand.nextFloat() - 0.5f) * (float)Math.PI; // 球面坐标
+            
+            // 增加龙卷风般的缓慢公转旋涡感
+            float spinAngle = (time + partialTick) * (rand.nextFloat() * 0.05f + 0.02f) * (rand.nextBoolean() ? 1 : -1);
+            theta += spinAngle;
+
+            double dx = currentDist * Math.cos(phi) * Math.cos(theta);
+            double dy = currentDist * Math.sin(phi);
+            double dz = currentDist * Math.cos(phi) * Math.sin(theta);
+            
+            // 计算粒子不透明度，在远处淡入，在极近处淡出，中间保持最亮
+            float starAlphaF = 1.0f;
+            if (currentDist > startDist - 2f) starAlphaF = (startDist - currentDist) / 2f;
+            if (currentDist < 3f) starAlphaF = currentDist / 3f;
+            int starAlpha = (int)(255 * starAlphaF);
+
+            poseStack.pushPose();
+            poseStack.translate(0.5D + dx, 1.5D + dy, 0.5D + dz);
+            poseStack.mulPose(cameraRot); // 始终朝向摄像机 (Billboard)
+            
+            // 给星星一个自身的旋转角，更鲜活
+            poseStack.mulPose(Axis.ZP.rotationDegrees((time + partialTick) * (rand.nextFloat() * 5f + 2f) * (rand.nextBoolean() ? 1:-1)));
+            
+            float starScale = 0.4f + rand.nextFloat() * 0.8f;
+            drawTexturedQuadWithAlpha(starBuilder, poseStack, starScale, starScale, maxLight, starAlpha);
+            poseStack.popPose();
+        }
     }
 
     private void drawVolumetricBeam(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light) {

@@ -155,58 +155,12 @@ public class WinterCoreBlockEntity extends BlockEntity {
                 }
             }
 
-            // 造成伤害及附加状态效果，并触发瞬间光芒爆发特效
+            // 造成伤害及附加状态效果
             blockEntity.processEntityDamage();
-            if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-                blockEntity.triggerNovaBurst(serverLevel);
-            }
         }
     }
 
-    /**
-     * 发射性光芒特效：从核心瞬间向周围逸散的高速粒子射线。
-     * 当核心每秒进行环境扫描/伤害时触发一次新爆发。
-     */
-    private void triggerNovaBurst(net.minecraft.server.level.ServerLevel serverLevel) {
-        double cx = worldPosition.getX() + 0.5;
-        double cy = worldPosition.getY() + 1.5; // 核心的发光中心
-        double cz = worldPosition.getZ() + 0.5;
 
-        int count = 60; // 一次爆发出大量粒子形成射线
-        for (int i = 0; i < count; i++) {
-            // 球面均匀分布扩散
-            double theta = 2.0 * Math.PI * level.random.nextDouble();
-            double phi = Math.acos(2.0 * level.random.nextDouble() - 1.0);
-            
-            // 限制主要向水平和斜上方逸散，避免射向地下
-            if (phi > Math.PI / 2 + 0.2) {
-                phi = Math.PI / 2 - level.random.nextDouble() * 0.5;
-            }
-
-            double speed = 0.5 + level.random.nextDouble() * 1.5; // 高速发射
-            double vx = Math.sin(phi) * Math.cos(theta) * speed;
-            double vy = Math.cos(phi) * speed;
-            double vz = Math.sin(phi) * Math.sin(theta) * speed;
-
-            // 0作为随机器件在 sendParticles 会启用方向性速度传递
-            serverLevel.sendParticles(
-                    net.minecraft.core.particles.ParticleTypes.END_ROD,
-                    cx, cy, cz,
-                    0,        // 个数设为0，允许速度向量生效
-                    vx, vy, vz, 
-                    1.0       // 速度乘数
-            );
-            
-            // 追加一些青色发光粒子作为电磁火花点缀
-            serverLevel.sendParticles(
-                    net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK,
-                    cx, cy, cz,
-                    0,
-                    vx * 1.2, vy * 1.2, vz * 1.2,
-                    1.0
-            );
-        }
-    }
 
     private boolean checkMultiblock() {
         if (level == null) return false;
