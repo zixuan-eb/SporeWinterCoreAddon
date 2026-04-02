@@ -22,6 +22,32 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
     private static final ResourceLocation PULSE_WAVE = new ResourceLocation("wintercore", "textures/effect/pulse_wave.png");
     private static final ResourceLocation WINTER_STAR = new ResourceLocation("wintercore", "textures/effect/winter_star.png");
 
+    public static class AdditiveRenderType extends RenderType {
+        public AdditiveRenderType(String name, com.mojang.blaze3d.vertex.VertexFormat format, com.mojang.blaze3d.vertex.VertexFormat.Mode mode, int size, boolean affectsCrumbling, boolean sortOnUpload, Runnable setup, Runnable clear) {
+            super(name, format, mode, size, affectsCrumbling, sortOnUpload, setup, clear);
+        }
+
+        public static RenderType getAdditive(ResourceLocation location) {
+            RenderType.CompositeState state = RenderType.CompositeState.builder()
+                    .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_EMISSIVE_SHADER)
+                    .setTextureState(new RenderStateShard.TextureStateShard(location, false, false))
+                    .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                    .setCullState(NO_CULL)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .setDepthTestState(NO_DEPTH_TEST)
+                    .createCompositeState(false);
+            return RenderType.create("wintercore_additive",
+                    com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY,
+                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+                    256, false, true, state);
+        }
+    }
+
+    public static final RenderType ADDITIVE_MAGIC_CIRCLE = AdditiveRenderType.getAdditive(MAGIC_CIRCLE);
+    public static final RenderType ADDITIVE_MAGIC_BEAM = AdditiveRenderType.getAdditive(MAGIC_BEAM);
+    public static final RenderType ADDITIVE_PULSE_WAVE = AdditiveRenderType.getAdditive(PULSE_WAVE);
+    public static final RenderType ADDITIVE_WINTER_STAR = AdditiveRenderType.getAdditive(WINTER_STAR);
+
     public WinterCoreRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
@@ -63,11 +89,15 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         Minecraft.getInstance().getBlockRenderer().renderSingleBlock(crystalState, poseStack, bufferSource, maxLight, packedOverlay, net.minecraftforge.client.model.data.ModelData.EMPTY, RenderType.translucent());
         poseStack.popPose();
 
-        // 3. Render Spinning Magic Circles (Runic Arrays)
-        // 使用 beaconBeam 强行套用原版信标渲染管线，这使得光束与法阵能够被正确的半透明渲染序列处理，直接免疫冰面透视 Bug
-        VertexConsumer circleBuilder = bufferSource.getBuffer(RenderType.beaconBeam(MAGIC_CIRCLE, true));
+        // Effects are now drawn via ClientEvents using renderBeams() to ensure depth sorting.
+    }
+
+    public static void renderBeams(WinterCoreBlockEntity blockEntity, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int maxLight, int overlay) {
+        long time = blockEntity.getLevel().getGameTime();
+        float angleY = (time + partialTick) * 4f;
+
+        VertexConsumer circleBuilder = bufferSource.getBuffer(ADDITIVE_MAGIC_CIRCLE);
         
-        // Base wide circle (-0.95f is precisely right above the Winter Core Base surface at Y=-1.0)
         poseStack.pushPose();
         poseStack.translate(0.5D, -0.95f, 0.5D);
         poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 0.5f));
@@ -76,20 +106,17 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         drawTexturedQuad(circleBuilder, poseStack, baseScale, baseScale, maxLight);
         poseStack.popPose();
 
-        // Sky-high colossal domain magic circle
         poseStack.pushPose();
         poseStack.translate(0.5D, 120.0f, 0.5D);
-        poseStack.mulPose(Axis.YP.rotationDegrees(angleY * 0.15f)); // Slow majestic spin
+        poseStack.mulPose(Axis.YP.rotationDegrees(angleY * 0.15f)); 
         poseStack.mulPose(Axis.XP.rotationDegrees(90f));
         float skyScale = 160.0f + 2.0f * (float)Math.sin((time + partialTick) * 0.05f);
         drawTexturedQuad(circleBuilder, poseStack, skyScale, skyScale, maxLight);
         poseStack.popPose();
 
-        // 4. Volumetric intersecting Custom Laser Beams
-        VertexConsumer beamBuilder = bufferSource.getBuffer(RenderType.beaconBeam(MAGIC_BEAM, true));
+        VertexConsumer beamBuilder = bufferSource.getBuffer(ADDITIVE_MAGIC_BEAM);
         float beamHeight = 350f;
 
-        // Big outer rotating laser core (12-way planar star = volumetric cylinder)
         poseStack.pushPose();
         poseStack.translate(0.5D, -1.8f, 0.5D);
         poseStack.mulPose(Axis.YP.rotationDegrees(angleY * 2.0f));
@@ -97,7 +124,6 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         drawTrueVolumetricBeam(beamBuilder, poseStack, outerWidth, beamHeight, maxLight);
         poseStack.popPose();
 
-        // High intensity inner shaft spinning opposite
         poseStack.pushPose();
         poseStack.translate(0.5D, -1.8f, 0.5D);
         poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 3.0f));
@@ -105,44 +131,39 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         drawTrueVolumetricBeam(beamBuilder, poseStack, innerWidth, beamHeight, maxLight);
         poseStack.popPose();
 
-        // 5. Pulse Wave Rings —— 多层高空能量冲击波 (周期大幅加长)
-        float cycleDuration = 60.0f; // 3秒长周期
+        float cycleDuration = 60.0f; 
         float pulseProgress = ((time % (long)cycleDuration) + partialTick) / cycleDuration;
-        VertexConsumer pulseBuilder = bufferSource.getBuffer(RenderType.beaconBeam(PULSE_WAVE, true));
+        VertexConsumer pulseBuilder = bufferSource.getBuffer(ADDITIVE_PULSE_WAVE);
 
-        // Layer A — 核心底部基座爆发：从核心扩散至全领域
-        float aP = Math.min(1f, pulseProgress * 1.5f); // 2秒展开完毕，保留1秒余韵
+        float aP = Math.min(1f, pulseProgress * 1.5f); 
         poseStack.pushPose();
         poseStack.translate(0.5D, -0.93f, 0.5D);
         poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 0.5f)); 
         poseStack.mulPose(Axis.XP.rotationDegrees(90f));
-        float sizeA = aP * 70f; // 大范围扩散
+        float sizeA = aP * 70f; 
         drawTexturedQuadWithAlpha(pulseBuilder, poseStack, sizeA, sizeA, maxLight, (int)(255 * (1f - aP)));
         poseStack.popPose();
 
-        // Layer B — 中空扩散：升空并扩大
         float bP = pulseProgress; 
         poseStack.pushPose();
-        poseStack.translate(0.5D, 40.0f, 0.5D); // 在40格高处爆发
+        poseStack.translate(0.5D, 40.0f, 0.5D); 
         poseStack.mulPose(Axis.YP.rotationDegrees(angleY * 0.4f));
         poseStack.mulPose(Axis.XP.rotationDegrees(90f));
-        float sizeB = bP * 120f; // 更广阔的覆盖
+        float sizeB = bP * 120f; 
         drawTexturedQuadWithAlpha(pulseBuilder, poseStack, sizeB, sizeB, maxLight, (int)(200 * (1f - bP)));
         poseStack.popPose();
 
-        // Layer C — 高空延迟追击波：在接近云层高度散开
         float cP = Math.max(0f, (pulseProgress - 0.2f) / 0.8f);
         poseStack.pushPose();
-        poseStack.translate(0.5D, 90.0f, 0.5D); // 极高空
+        poseStack.translate(0.5D, 90.0f, 0.5D);
         poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 0.2f));
         poseStack.mulPose(Axis.XP.rotationDegrees(90f));
-        float sizeC = cP * 160f; // 笼罩整个领域级别的天空波纹
+        float sizeC = cP * 160f; 
         drawTexturedQuadWithAlpha(pulseBuilder, poseStack, sizeC, sizeC, maxLight, (int)(150 * (1f - cP)));
         poseStack.popPose();
 
-        // 6. Custom Converging "Winter Stars" Pseudo-Particles
         org.joml.Quaternionf cameraRot = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
-        VertexConsumer starBuilder = bufferSource.getBuffer(RenderType.beaconBeam(WINTER_STAR, true));
+        VertexConsumer starBuilder = bufferSource.getBuffer(ADDITIVE_WINTER_STAR);
         int starCount = 80;
         
         for (int i = 0; i < starCount; i++) {
@@ -185,7 +206,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         }
     }
 
-    private void drawTrueVolumetricBeam(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light) {
+    private static void drawTrueVolumetricBeam(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light) {
         var pose = matrixStack.last().pose();
         var normal = matrixStack.last().normal();
         float radius = width / 2.0f;
@@ -217,7 +238,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
     /**
      * 绘制支持动态透明度的纹理四边形（用于脉冲光环淡出效果）
      */
-    private void drawTexturedQuadWithAlpha(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light, int alpha) {
+    private static void drawTexturedQuadWithAlpha(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light, int alpha) {
         if (alpha <= 0) return;
         var pose = matrixStack.last().pose();
         var normal = matrixStack.last().normal();
@@ -229,7 +250,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         builder.vertex(pose, -hw, -hh, 0).color(255, 255, 255, alpha).uv(0, 0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 0, 1).endVertex();
     }
 
-    private void drawTexturedQuad(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light) {
+    private static void drawTexturedQuad(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light) {
         var pose = matrixStack.last().pose();
         var normal = matrixStack.last().normal();
         float hw = width / 2.0f;

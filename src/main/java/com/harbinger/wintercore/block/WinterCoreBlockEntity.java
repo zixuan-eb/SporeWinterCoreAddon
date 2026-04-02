@@ -165,11 +165,25 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
         return this.saveWithFullMetadata();
     }
 
+    public static final java.util.Set<WinterCoreBlockEntity> CLIENT_CORES = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    @Override
+    public void clearRemoved() {
+        super.clearRemoved();
+        if (level != null && level.isClientSide()) {
+            CLIENT_CORES.add(this);
+        }
+    }
+
     @Override
     public void setRemoved() {
         super.setRemoved();
-        if (level != null && !level.isClientSide()) {
-            unregisterCore();
+        if (level != null) {
+            if (level.isClientSide()) {
+                CLIENT_CORES.remove(this);
+            } else {
+                unregisterCore();
+            }
         }
     }
 
