@@ -140,12 +140,29 @@ public class WinterCoreBlockEntity extends BlockEntity {
             blockEntity.updateWaveAnimation(serverLevel);
         }
 
-        // 每 20 tick（约 1 秒）：结构检测 + 方块净化 + 实体伤害
+        // 核心开启时，每 tick 执行大量方块扫描
+        if (blockEntity.isFormed) {
+             blockEntity.processBlockConversion();
+        }
+
+        // 每 20 tick（约 1 秒）：结构检测 + 实体伤害 + 推进半径
         if (blockEntity.tickCounter % 20 != 0) return;
 
         if (blockEntity.checkMultiblock()) {
             if (!blockEntity.isFormed) return;
-            blockEntity.processBlockConversion();
+            
+            // 每秒推进净化波前沿（从核心向外缓慢扩散）
+            int radius = WinterCoreConfig.COMMON.effectRadius.get();
+            if (blockEntity.waveRadius < radius) {
+                boolean wasNotFull = blockEntity.waveRadius < radius;
+                blockEntity.waveRadius = Math.min(radius, blockEntity.waveRadius + WAVE_GROWTH_PER_SECOND);
+                blockEntity.setChanged();
+                // 首次铺满：触发净化完成特效
+                if (wasNotFull && blockEntity.waveRadius >= radius && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                    blockEntity.onPurificationComplete(serverLevel);
+                }
+            }
+
             // 造成伤害后触发一次新的光波环动画
             blockEntity.processEntityDamage();
             if (blockEntity.waveAnimTicks <= 0) {
@@ -293,30 +310,17 @@ public class WinterCoreBlockEntity extends BlockEntity {
             reloadReplacementMap();
         }
 
-        int radius = WinterCoreConfig.COMMON.effectRadius.get();
-        int rSq = radius * radius;
+        int activeRadius = (int) Math.ceil(this.waveRadius);
+        int activeRSq = activeRadius * activeRadius;
         int worldMinY = level.getMinBuildHeight();
         int worldMaxY = level.getMaxBuildHeight() - 1;
-
-        // 每秒推进净化波前沿（从核心向外缓慢扩散）
-        if (waveRadius < radius) {
-            boolean wasNotFull = waveRadius < radius;
-            waveRadius = Math.min(radius, waveRadius + WAVE_GROWTH_PER_SECOND);
-            this.setChanged();
-            // 首次铺满：触发净化完成特效
-            if (wasNotFull && waveRadius >= radius && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-                onPurificationComplete(serverLevel);
-            }
-        }
-        int activeRadius = (int) Math.ceil(waveRadius);
-        int activeRSq = activeRadius * activeRadius;
 
         // 安全钳：坐标必须在当前 activeRadius 与世界高度范围内
         if (scanZ < -activeRadius || scanZ > activeRadius) { scanZ = -activeRadius; }
         if (scanY < worldMinY || scanY > worldMaxY) { scanY = worldMinY; }
 
         // 根据当前 scanZ 预算出有效 X 半跨度，并约束 scanX
-        int xHalf = (int) Math.sqrt(activeRSq - (long) scanZ * scanZ);
+        int xHalf = (int) Math.sqrt(Math.max(0, activeRSq - (long) scanZ * scanZ));
         if (scanX < -xHalf || scanX > xHalf) { scanX = -xHalf; }
 
         int checks = 0;

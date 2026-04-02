@@ -13,11 +13,32 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
 
+import net.minecraft.client.renderer.RenderStateShard;
+
 public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEntity> {
 
     private static final ResourceLocation MAGIC_CIRCLE = new ResourceLocation("wintercore", "textures/effect/magic_circle.png");
     private static final ResourceLocation MAGIC_BEAM = new ResourceLocation("wintercore", "textures/effect/magic_beam.png");
     private static final ResourceLocation PULSE_WAVE = new ResourceLocation("wintercore", "textures/effect/pulse_wave.png");
+    public static class AdditiveRenderType extends RenderType {
+        public AdditiveRenderType(String p_173178_, com.mojang.blaze3d.vertex.VertexFormat p_173179_, com.mojang.blaze3d.vertex.VertexFormat.Mode p_173180_, int p_173181_, boolean p_173182_, boolean p_173183_, Runnable p_173184_, Runnable p_173185_) {
+            super(p_173178_, p_173179_, p_173180_, p_173181_, p_173182_, p_173183_, p_173184_, p_173185_);
+        }
+
+        public static RenderType getAdditive(ResourceLocation location) {
+            RenderType.CompositeState state = RenderType.CompositeState.builder()
+                    .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_EMISSIVE_SHADER)
+                    .setTextureState(new RenderStateShard.TextureStateShard(location, false, false))
+                    .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                    .setCullState(NO_CULL)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .createCompositeState(false);
+            return RenderType.create("wintercore_additive",
+                    com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY,
+                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+                    256, false, true, state);
+        }
+    }
 
     public WinterCoreRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -102,7 +123,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         // 5. Pulse Wave Rings —— 三层同心光环每秒从核心向外扩散淡出
         // 纯客户端时间驱动（gameTime % 20），无需服务端同步
         float pulseProgress = ((time % 20L) + partialTick) / 20.0f; // 0→1，每秒一次
-        VertexConsumer pulseBuilder = bufferSource.getBuffer(RenderType.entityTranslucent(PULSE_WAVE));
+        VertexConsumer pulseBuilder = bufferSource.getBuffer(AdditiveRenderType.getAdditive(PULSE_WAVE));
 
         // Layer A — 内圈急速爆发：0→1 仅用 0.5s，小而亮，带额外旋转冲量
         float aP = Math.min(1f, pulseProgress * 2f);
