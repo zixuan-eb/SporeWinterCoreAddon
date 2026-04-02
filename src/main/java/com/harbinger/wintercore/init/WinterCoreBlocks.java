@@ -87,6 +87,9 @@ public class WinterCoreBlocks {
                 }
             });
 
+    public static final RegistryObject<Item> WINTER_INFINITE_ENERGY_CELL = ITEMS.register("winter_infinite_energy_cell",
+            () -> new com.harbinger.wintercore.item.WinterInfiniteEnergyCellItem(new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
+
     public static final RegistryObject<BlockEntityType<WinterCoreBlockEntity>> WINTER_CORE_BE = BLOCK_ENTITIES.register("winter_core_be",
             () -> BlockEntityType.Builder.of(WinterCoreBlockEntity::new, WINTER_CORE.get()).build(null));
 
@@ -100,5 +103,6 @@ public class WinterCoreBlocks {
                 output.accept(WINTER_CORE_PEDESTAL_ITEM.get());
                 output.accept(WINTER_CORE_PILLAR_ITEM.get());
                 output.accept(WINTER_ENERGY_CELL.get());
+                output.accept(WINTER_INFINITE_ENERGY_CELL.get());
             }).build());
 }

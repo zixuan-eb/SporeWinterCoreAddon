@@ -18,5 +18,7 @@
   "ponder.wintercore.winter_core_assembly.step4": "Set the Winter Core on top of the Pedestal to complete the structure",
   "ponder.wintercore.winter_core_assembly.activated": "The Fimbulwinter Core is now active — it will purify infections within its radius",
   "item.wintercore.winter_energy_cell": "Winter Energy Cell",
-  "tooltip.wintercore.winter_energy_cell": "Packed with high-density plasma. Powers the core."
+  "tooltip.wintercore.winter_energy_cell": "Packed with high-density plasma. Powers the core.",
+  "item.wintercore.winter_infinite_energy_cell": "Infinite Winter Energy Cell",
+  "tooltip.wintercore.winter_infinite_energy_cell": "Contains boundless absolute-zero energy. The core will never run out of power."
 }
