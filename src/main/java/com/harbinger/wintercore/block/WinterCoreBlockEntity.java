@@ -347,29 +347,34 @@ public class WinterCoreBlockEntity extends BlockEntity {
 
                     // 5. Native Snow Layering (Ambient Blizzards and Immediate Purge Frosting)
                     if (WinterCoreConfig.COMMON.renderSnow.get()) {
-                        BlockState above = level.getBlockState(targetPos.above());
-                        boolean canSeeSky = level.canSeeSkyFromBelowWater(targetPos.above());
+                        ResourceLocation currentId = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+                        boolean isWinterCoreBlock = currentId != null && currentId.getNamespace().equals("wintercore");
 
-                        // Immediately frost over purged blocks, or slowly coat naked vanilla plain blocks outdoors
-                        if (above.isAir() && state.isSolidRender(level, targetPos)) {
-                            if (converted) {
-                                level.setBlockAndUpdate(targetPos.above(), net.minecraft.world.level.block.Blocks.SNOW.defaultBlockState().setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, level.random.nextInt(1, 3)));
-                            } else if (canSeeSky && level.random.nextInt(8) == 0) {
-                                level.setBlockAndUpdate(targetPos.above(), net.minecraft.world.level.block.Blocks.SNOW.defaultBlockState().setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, 1));
-                            }
-                        }
-                        // Dynamically accumulate deeper snowpiles over time (ONLY OUTDOORS)
-                        else if (above.getBlock() == net.minecraft.world.level.block.Blocks.SNOW && canSeeSky) {
-                            if (level.random.nextInt(40) == 0) {
-                                int layers = above.getValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS);
-                                if (layers < 4) {
-                                    level.setBlockAndUpdate(targetPos.above(), above.setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, layers + 1));
+                        if (!isWinterCoreBlock) {
+                            BlockState above = level.getBlockState(targetPos.above());
+                            boolean canSeeSky = level.canSeeSkyFromBelowWater(targetPos.above());
+
+                            // Immediately frost over purged blocks, or slowly coat naked vanilla plain blocks outdoors
+                            if (above.isAir() && state.isSolidRender(level, targetPos)) {
+                                if (converted) {
+                                    level.setBlockAndUpdate(targetPos.above(), net.minecraft.world.level.block.Blocks.SNOW.defaultBlockState().setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, level.random.nextInt(1, 3)));
+                                } else if (canSeeSky && level.random.nextInt(8) == 0) {
+                                    level.setBlockAndUpdate(targetPos.above(), net.minecraft.world.level.block.Blocks.SNOW.defaultBlockState().setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, 1));
                                 }
                             }
-                        }
-                        // Deep freeze water into ice (ONLY OUTDOORS)
-                        else if (above.getBlock() == net.minecraft.world.level.block.Blocks.WATER && canSeeSky && level.random.nextInt(10) == 0) {
-                            level.setBlockAndUpdate(targetPos.above(), net.minecraft.world.level.block.Blocks.ICE.defaultBlockState());
+                            // Dynamically accumulate deeper snowpiles over time (ONLY OUTDOORS)
+                            else if (above.getBlock() == net.minecraft.world.level.block.Blocks.SNOW && canSeeSky) {
+                                if (level.random.nextInt(40) == 0) {
+                                    int layers = above.getValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS);
+                                    if (layers < 4) {
+                                        level.setBlockAndUpdate(targetPos.above(), above.setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, layers + 1));
+                                    }
+                                }
+                            }
+                            // Deep freeze water into ice (ONLY OUTDOORS)
+                            else if (above.getBlock() == net.minecraft.world.level.block.Blocks.WATER && canSeeSky && level.random.nextInt(10) == 0) {
+                                level.setBlockAndUpdate(targetPos.above(), net.minecraft.world.level.block.Blocks.ICE.defaultBlockState());
+                            }
                         }
                     }
                 }
