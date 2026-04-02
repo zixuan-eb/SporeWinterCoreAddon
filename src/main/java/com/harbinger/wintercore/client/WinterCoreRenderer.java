@@ -218,9 +218,10 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
             float x2 = (float) Math.cos(angle2) * radius;
             float z2 = (float) Math.sin(angle2) * radius;
             
-            // 将贴图横向切分布满圆柱体：
-            float u1 = (float) i / segments;
-            float u2 = (float) (i + 1) / segments;
+            // 将完整的贴图光束均匀映射在每一个多边形切面上
+            // （而不是切分贴图，否则由于原光束贴图两边带透明通道边缘，会导致看似一根偏心的光线在绕柱公转）
+            float u1 = 0.0f;
+            float u2 = 1.0f;
             
             // 四边形的顶点绘制：底左、底右、顶右、顶左
             builder.vertex(pose, x1, 0, z1).color(255, 255, 255, 255).uv(u1, 1).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 1, 0).endVertex();
