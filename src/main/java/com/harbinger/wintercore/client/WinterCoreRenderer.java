@@ -21,25 +21,6 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
     private static final ResourceLocation MAGIC_BEAM = new ResourceLocation("wintercore", "textures/effect/magic_beam.png");
     private static final ResourceLocation PULSE_WAVE = new ResourceLocation("wintercore", "textures/effect/pulse_wave.png");
     private static final ResourceLocation WINTER_STAR = new ResourceLocation("wintercore", "textures/effect/winter_star.png");
-    public static class AdditiveRenderType extends RenderType {
-        public AdditiveRenderType(String p_173178_, com.mojang.blaze3d.vertex.VertexFormat p_173179_, com.mojang.blaze3d.vertex.VertexFormat.Mode p_173180_, int p_173181_, boolean p_173182_, boolean p_173183_, Runnable p_173184_, Runnable p_173185_) {
-            super(p_173178_, p_173179_, p_173180_, p_173181_, p_173182_, p_173183_, p_173184_, p_173185_);
-        }
-
-        public static RenderType getAdditive(ResourceLocation location) {
-            RenderType.CompositeState state = RenderType.CompositeState.builder()
-                    .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_EMISSIVE_SHADER)
-                    .setTextureState(new RenderStateShard.TextureStateShard(location, false, false))
-                    .setTransparencyState(LIGHTNING_TRANSPARENCY)
-                    .setCullState(NO_CULL)
-                    .setWriteMaskState(COLOR_WRITE)
-                    .createCompositeState(false);
-            return RenderType.create("wintercore_additive",
-                    com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
-                    256, false, true, state);
-        }
-    }
 
     public WinterCoreRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -84,7 +65,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
 
         // 3. Render Spinning Magic Circles (Runic Arrays)
         // 使用 AdditiveRenderType 避免写入深度缓冲（Depth Write），从而修复透过阵法看不见冰面/水面的透视 Bug！
-        VertexConsumer circleBuilder = bufferSource.getBuffer(AdditiveRenderType.getAdditive(MAGIC_CIRCLE));
+        VertexConsumer circleBuilder = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(MAGIC_CIRCLE));
         
         // Base wide circle (-0.95f is precisely right above the Winter Core Base surface at Y=-1.0)
         poseStack.pushPose();
@@ -105,7 +86,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         poseStack.popPose();
 
         // 4. Volumetric intersecting Custom Laser Beams
-        VertexConsumer beamBuilder = bufferSource.getBuffer(AdditiveRenderType.getAdditive(MAGIC_BEAM));
+        VertexConsumer beamBuilder = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(MAGIC_BEAM));
         float beamHeight = 350f;
 
         // Big outer rotating laser core (12-way planar star = volumetric cylinder)
@@ -127,7 +108,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         // 5. Pulse Wave Rings —— 多层高空能量冲击波 (周期大幅加长)
         float cycleDuration = 60.0f; // 3秒长周期
         float pulseProgress = ((time % (long)cycleDuration) + partialTick) / cycleDuration;
-        VertexConsumer pulseBuilder = bufferSource.getBuffer(AdditiveRenderType.getAdditive(PULSE_WAVE));
+        VertexConsumer pulseBuilder = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(PULSE_WAVE));
 
         // Layer A — 核心底部基座爆发：从核心扩散至全领域
         float aP = Math.min(1f, pulseProgress * 1.5f); // 2秒展开完毕，保留1秒余韵
@@ -161,7 +142,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
 
         // 6. Custom Converging "Winter Stars" Pseudo-Particles
         org.joml.Quaternionf cameraRot = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
-        VertexConsumer starBuilder = bufferSource.getBuffer(AdditiveRenderType.getAdditive(WINTER_STAR));
+        VertexConsumer starBuilder = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WINTER_STAR));
         int starCount = 80;
         
         for (int i = 0; i < starCount; i++) {

@@ -55,7 +55,7 @@ public class WinterCoreBlocks {
             });
 
     public static final RegistryObject<Block> WINTER_CORE_BASE = BLOCKS.register("winter_core_base",
-            () -> new WinterCoreBaseBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops()));
+            () -> new Block(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops()));
 
     public static final RegistryObject<Item> WINTER_CORE_BASE_ITEM = ITEMS.register("winter_core_base",
             () -> new BlockItem(WINTER_CORE_BASE.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)) {
@@ -66,7 +66,7 @@ public class WinterCoreBlocks {
             });
 
     public static final RegistryObject<Block> WINTER_CORE_PEDESTAL = BLOCKS.register("winter_core_pedestal",
-            () -> new Block(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops()));
+            () -> new WinterCoreBaseBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(50.0F, 1200.0F).requiresCorrectToolForDrops().noOcclusion()));
 
     public static final RegistryObject<Item> WINTER_CORE_PEDESTAL_ITEM = ITEMS.register("winter_core_pedestal",
             () -> new BlockItem(WINTER_CORE_PEDESTAL.get(), new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)) {
