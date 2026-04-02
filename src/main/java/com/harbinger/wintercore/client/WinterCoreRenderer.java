@@ -80,7 +80,8 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         poseStack.popPose();
 
         // 3. Render Spinning Magic Circles (Runic Arrays)
-        VertexConsumer circleBuilder = bufferSource.getBuffer(RenderType.entityTranslucent(MAGIC_CIRCLE));
+        // 使用 AdditiveRenderType 避免写入深度缓冲（Depth Write），从而修复透过阵法看不见冰面/水面的透视 Bug！
+        VertexConsumer circleBuilder = bufferSource.getBuffer(AdditiveRenderType.getAdditive(MAGIC_CIRCLE));
         
         // Base wide circle (-0.95f is precisely right above the Winter Core Base surface at Y=-1.0)
         poseStack.pushPose();
@@ -120,35 +121,39 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         drawVolumetricBeam(beamBuilder, poseStack, innerWidth, beamHeight, maxLight);
         poseStack.popPose();
 
-        // 5. Pulse Wave Rings —— 三层同心光环每秒从核心向外扩散淡出
-        // 纯客户端时间驱动（gameTime % 20），无需服务端同步
-        float pulseProgress = ((time % 20L) + partialTick) / 20.0f; // 0→1，每秒一次
+        // 5. Pulse Wave Rings —— 多层高空能量冲击波 (周期大幅加长)
+        float cycleDuration = 60.0f; // 3秒长周期
+        float pulseProgress = ((time % (long)cycleDuration) + partialTick) / cycleDuration;
         VertexConsumer pulseBuilder = bufferSource.getBuffer(AdditiveRenderType.getAdditive(PULSE_WAVE));
 
-        // Layer A — 内圈急速爆发：0→1 仅用 0.5s，小而亮，带额外旋转冲量
-        float aP = Math.min(1f, pulseProgress * 2f);
+        // Layer A — 核心底部基座爆发：从核心扩散至全领域
+        float aP = Math.min(1f, pulseProgress * 1.5f); // 2秒展开完毕，保留1秒余韵
         poseStack.pushPose();
-        poseStack.translate(0.5D, -0.93f + aP * 0.15, 0.5D);
-        poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 0.5f + aP * 45f)); // 旋转冲量
+        poseStack.translate(0.5D, -0.93f, 0.5D);
+        poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 0.5f)); 
         poseStack.mulPose(Axis.XP.rotationDegrees(90f));
-        drawTexturedQuadWithAlpha(pulseBuilder, poseStack, aP * 9.5f, aP * 9.5f, maxLight, (int)(220 * (1f - aP)));
+        float sizeA = aP * 70f; // 大范围扩散
+        drawTexturedQuadWithAlpha(pulseBuilder, poseStack, sizeA, sizeA, maxLight, (int)(255 * (1f - aP)));
         poseStack.popPose();
 
-        // Layer B — 中环匀速扩散：完整 1s，反向缓转
+        // Layer B — 中空扩散：升空并扩大
+        float bP = pulseProgress; 
         poseStack.pushPose();
-        poseStack.translate(0.5D, -0.95f + pulseProgress * 0.25, 0.5D);
-        poseStack.mulPose(Axis.YP.rotationDegrees(angleY * 0.25f));
+        poseStack.translate(0.5D, 40.0f, 0.5D); // 在40格高处爆发
+        poseStack.mulPose(Axis.YP.rotationDegrees(angleY * 0.4f));
         poseStack.mulPose(Axis.XP.rotationDegrees(90f));
-        drawTexturedQuadWithAlpha(pulseBuilder, poseStack, pulseProgress * 15f, pulseProgress * 15f, maxLight, (int)(160 * (1f - pulseProgress)));
+        float sizeB = bP * 120f; // 更广阔的覆盖
+        drawTexturedQuadWithAlpha(pulseBuilder, poseStack, sizeB, sizeB, maxLight, (int)(200 * (1f - bP)));
         poseStack.popPose();
 
-        // Layer C — 外环延迟追踪：0.25s 后才开始，幅度最大，轻微反转
-        float cP = Math.max(0f, (pulseProgress - 0.25f) / 0.75f);
+        // Layer C — 高空延迟追击波：在接近云层高度散开
+        float cP = Math.max(0f, (pulseProgress - 0.2f) / 0.8f);
         poseStack.pushPose();
-        poseStack.translate(0.5D, -0.95f + cP * 0.35, 0.5D);
-        poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 0.1f));
+        poseStack.translate(0.5D, 90.0f, 0.5D); // 极高空
+        poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 0.2f));
         poseStack.mulPose(Axis.XP.rotationDegrees(90f));
-        drawTexturedQuadWithAlpha(pulseBuilder, poseStack, cP * 22f, cP * 22f, maxLight, (int)(110 * (1f - cP)));
+        float sizeC = cP * 160f; // 笼罩整个领域级别的天空波纹
+        drawTexturedQuadWithAlpha(pulseBuilder, poseStack, sizeC, sizeC, maxLight, (int)(150 * (1f - cP)));
         poseStack.popPose();
     }
 

@@ -43,9 +43,7 @@ public class WinterCoreBlockEntity extends BlockEntity {
     private float waveRadius = 0f;
     private static final float WAVE_GROWTH_PER_SECOND = 0.5f; // 每秒扩展 0.5 格（radius=96 时约 3.2 分钟铺满）
 
-    // 光波环动画：伤害触发后环形粒子从内向外扩散淡出
-    private int waveAnimTicks = 0;
-    private static final int WAVE_ANIM_DURATION = 25; // 动画总帧数（25 tick ≈ 1.25 秒）
+    // (废弃旧版持续发光环状态)
     
     public WinterCoreBlockEntity(BlockPos pos, BlockState state) {
         super(WinterCoreBlocks.WINTER_CORE_BE.get(), pos, state);
@@ -134,12 +132,6 @@ public class WinterCoreBlockEntity extends BlockEntity {
     public static void serverTick(Level level, BlockPos pos, BlockState state, WinterCoreBlockEntity blockEntity) {
         blockEntity.tickCounter++;
 
-        // 每 tick：更新光波环动画（不受 20tick 节流影响，确保动画流畅）
-        if (blockEntity.isFormed && blockEntity.waveAnimTicks > 0
-                && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-            blockEntity.updateWaveAnimation(serverLevel);
-        }
-
         // 核心开启时，每 tick 执行大量方块扫描
         if (blockEntity.isFormed) {
              blockEntity.processBlockConversion();
@@ -163,42 +155,57 @@ public class WinterCoreBlockEntity extends BlockEntity {
                 }
             }
 
-            // 造成伤害后触发一次新的光波环动画
+            // 造成伤害及附加状态效果，并触发瞬间光芒爆发特效
             blockEntity.processEntityDamage();
-            if (blockEntity.waveAnimTicks <= 0) {
-                blockEntity.waveAnimTicks = WAVE_ANIM_DURATION;
+            if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                blockEntity.triggerNovaBurst(serverLevel);
             }
         }
     }
 
     /**
-     * 光波环动画：END_ROD 粒子从核心中心向外扩散，粒子数随半径增大而减少，
-     * 形成「从内向外慢慢淡出」的光环效果。每 tick 调用一次。
+     * 发射性光芒特效：从核心瞬间向周围逸散的高速粒子射线。
+     * 当核心每秒进行环境扫描/伤害时触发一次新爆发。
      */
-    private void updateWaveAnimation(net.minecraft.server.level.ServerLevel serverLevel) {
-        // progress = 0（动画刚开始，环在核心处）→ 1（动画结束，环在外缘）
-        float progress = 1f - (waveAnimTicks / (float) WAVE_ANIM_DURATION);
-        float ringR = progress * 5.5f;                              // 环半径：0 → 5.5 格
-        int count = Math.max(6, (int) (40 * (1f - progress * 0.87f))); // 粒子数：40 → 6（淡出）
-
+    private void triggerNovaBurst(net.minecraft.server.level.ServerLevel serverLevel) {
         double cx = worldPosition.getX() + 0.5;
-        double cy = worldPosition.getY() + 0.5 + 0.15 + progress * 0.4; // 随扩散轻微上浮
+        double cy = worldPosition.getY() + 1.5; // 核心的发光中心
         double cz = worldPosition.getZ() + 0.5;
 
+        int count = 60; // 一次爆发出大量粒子形成射线
         for (int i = 0; i < count; i++) {
-            double angle = (2.0 * Math.PI * i) / count;
-            double x = cx + Math.cos(angle) * ringR;
-            double z = cz + Math.sin(angle) * ringR;
-            // END_ROD：白色发光点，贴合凛冬/魔法主题
+            // 球面均匀分布扩散
+            double theta = 2.0 * Math.PI * level.random.nextDouble();
+            double phi = Math.acos(2.0 * level.random.nextDouble() - 1.0);
+            
+            // 限制主要向水平和斜上方逸散，避免射向地下
+            if (phi > Math.PI / 2 + 0.2) {
+                phi = Math.PI / 2 - level.random.nextDouble() * 0.5;
+            }
+
+            double speed = 0.5 + level.random.nextDouble() * 1.5; // 高速发射
+            double vx = Math.sin(phi) * Math.cos(theta) * speed;
+            double vy = Math.cos(phi) * speed;
+            double vz = Math.sin(phi) * Math.sin(theta) * speed;
+
+            // 0作为随机器件在 sendParticles 会启用方向性速度传递
             serverLevel.sendParticles(
                     net.minecraft.core.particles.ParticleTypes.END_ROD,
-                    x, cy, z,
-                    1,        // 粒子数
-                    0.0, 0.03, 0.0, // 极小速度，只让粒子轻微上飘
-                    0.0       // speed（保持 0 让位置精准）
+                    cx, cy, cz,
+                    0,        // 个数设为0，允许速度向量生效
+                    vx, vy, vz, 
+                    1.0       // 速度乘数
+            );
+            
+            // 追加一些青色发光粒子作为电磁火花点缀
+            serverLevel.sendParticles(
+                    net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK,
+                    cx, cy, cz,
+                    0,
+                    vx * 1.2, vy * 1.2, vz * 1.2,
+                    1.0
             );
         }
-        waveAnimTicks--;
     }
 
     private boolean checkMultiblock() {
