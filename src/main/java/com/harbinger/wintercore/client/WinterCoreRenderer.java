@@ -64,8 +64,8 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         poseStack.popPose();
 
         // 3. Render Spinning Magic Circles (Runic Arrays)
-        // 使用 AdditiveRenderType 避免写入深度缓冲（Depth Write），从而修复透过阵法看不见冰面/水面的透视 Bug！
-        VertexConsumer circleBuilder = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(MAGIC_CIRCLE));
+        // 使用 beaconBeam 强行套用原版信标渲染管线，这使得光束与法阵能够被正确的半透明渲染序列处理，直接免疫冰面透视 Bug
+        VertexConsumer circleBuilder = bufferSource.getBuffer(RenderType.beaconBeam(MAGIC_CIRCLE, true));
         
         // Base wide circle (-0.95f is precisely right above the Winter Core Base surface at Y=-1.0)
         poseStack.pushPose();
@@ -86,7 +86,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         poseStack.popPose();
 
         // 4. Volumetric intersecting Custom Laser Beams
-        VertexConsumer beamBuilder = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(MAGIC_BEAM));
+        VertexConsumer beamBuilder = bufferSource.getBuffer(RenderType.beaconBeam(MAGIC_BEAM, true));
         float beamHeight = 350f;
 
         // Big outer rotating laser core (12-way planar star = volumetric cylinder)
@@ -108,7 +108,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         // 5. Pulse Wave Rings —— 多层高空能量冲击波 (周期大幅加长)
         float cycleDuration = 60.0f; // 3秒长周期
         float pulseProgress = ((time % (long)cycleDuration) + partialTick) / cycleDuration;
-        VertexConsumer pulseBuilder = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(PULSE_WAVE));
+        VertexConsumer pulseBuilder = bufferSource.getBuffer(RenderType.beaconBeam(PULSE_WAVE, true));
 
         // Layer A — 核心底部基座爆发：从核心扩散至全领域
         float aP = Math.min(1f, pulseProgress * 1.5f); // 2秒展开完毕，保留1秒余韵
@@ -142,7 +142,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
 
         // 6. Custom Converging "Winter Stars" Pseudo-Particles
         org.joml.Quaternionf cameraRot = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
-        VertexConsumer starBuilder = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WINTER_STAR));
+        VertexConsumer starBuilder = bufferSource.getBuffer(RenderType.beaconBeam(WINTER_STAR, true));
         int starCount = 80;
         
         for (int i = 0; i < starCount; i++) {
