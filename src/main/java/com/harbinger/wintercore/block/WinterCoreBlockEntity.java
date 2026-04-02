@@ -257,8 +257,12 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
             blockEntity.processBlockConversion();
         }
 
-        // 每 20 tick（约 1 秒）：结构检测 + 实体伤害 + 推进半径
+        // 每 20 tick（约 1 秒）：结构检测 + 实体伤害 + GUI数据同步 + 推进半径
         if (blockEntity.tickCounter % 20 != 0) return;
+
+        // 定期标记更新，保证后台耗电量和进度能每秒至少向客户端 GUI 刷新一次
+        blockEntity.setChanged();
+        level.sendBlockUpdated(pos, state, state, 3);
 
         if (blockEntity.checkMultiblock()) {
             if (!blockEntity.isFormed) return;
