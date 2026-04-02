@@ -1,5 +1,6 @@
 {
   "variants": {
-    "": { "model": "wintercore:block/winter_core_base" }
+    "formed=false": { "model": "wintercore:block/winter_core_base" },
+    "formed=true": { "model": "wintercore:block/winter_core_base_formed" }
   }
 }

@@ -1,0 +1,8 @@
+feat(core): massive QoL and integration update for Winter Core
+
+- feat(energy): decouple FE consumption from reflection and make energyPerTick configurable
+- i18n(config): fully localized all Winter Core config properties (en_us, zh_cn)
+- style(item): revamp energy cell textures to strict 16x16 32-color pixel art, with dynamic hue shifts for infinite variant
+- feat(block): allow placing Winter Core on pedestals directly without sneaking
+- feat(buffs): provide players inside the Safe Zone with freezing immunity, Haste I, Regen I, and auto-cleanse active Spore debuffs
+- feat(automation): implement capability forwarding in the bottom foundation stone block to accept external FE cables natively, and switch bottom texture to a glowing port when activated

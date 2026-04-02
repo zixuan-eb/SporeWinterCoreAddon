@@ -20,5 +20,11 @@
   "item.wintercore.winter_energy_cell": "Winter Energy Cell",
   "tooltip.wintercore.winter_energy_cell": "Packed with high-density plasma. Powers the core.",
   "item.wintercore.winter_infinite_energy_cell": "Infinite Winter Energy Cell",
-  "tooltip.wintercore.winter_infinite_energy_cell": "Contains boundless absolute-zero energy. The core will never run out of power."
+  "tooltip.wintercore.winter_infinite_energy_cell": "Contains boundless absolute-zero energy. The core will never run out of power.",
+  "wintercore.config.effectRadius": "Effect Radius",
+  "wintercore.config.damageMultiplier": "Damage Multiplier",
+  "wintercore.config.renderSnow": "Enable Snowstorm Particles",
+  "wintercore.config.preventSporeSpawns": "Prevent Spore Spawns",
+  "wintercore.config.energyPerTick": "Energy Usage (FE/t)",
+  "wintercore.config.blockConversions": "Block Conversion List"
 }

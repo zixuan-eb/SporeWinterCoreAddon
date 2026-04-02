@@ -142,11 +142,7 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
             itemHandler.deserializeNBT(tag.getCompound("Inventory"));
         }
         if (tag.contains("Energy")) {
-            try {
-                java.lang.reflect.Field energyField = EnergyStorage.class.getDeclaredField("energy");
-                energyField.setAccessible(true);
-                energyField.set(energyStorage, tag.getInt("Energy"));
-            } catch (Exception e) {}
+            energyStorage.deserializeNBT(tag.get("Energy"));
         }
         this.waveRadius = tag.getFloat("WaveRadius");
         this.scanX = tag.getInt("ScanX");
@@ -238,8 +234,9 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
             });
         }
 
-        // 常规每刻耗电：维持核心需要 5 FE / tick (100 FE/s)
-        boolean hasPower = blockEntity.energyStorage.getEnergyStored() >= 5;
+        // 常规每刻耗电
+        int energyPerTick = WinterCoreConfig.COMMON.energyPerTick.get();
+        boolean hasPower = blockEntity.energyStorage.getEnergyStored() >= energyPerTick;
 
         // 同步状态到客户端渲染层
         if (blockEntity.isPowered != hasPower) {
@@ -256,11 +253,7 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
 
         // 核心开启且有电时，每 tick 执行大量方块扫描
         if (blockEntity.isFormed && hasPower) {
-            try {
-                java.lang.reflect.Field energyField = EnergyStorage.class.getDeclaredField("energy");
-                energyField.setAccessible(true);
-                energyField.set(blockEntity.energyStorage, blockEntity.energyStorage.getEnergyStored() - 5);
-            } catch (Exception e) {}
+            blockEntity.energyStorage.extractEnergy(energyPerTick, false);
             blockEntity.processBlockConversion();
         }
 
@@ -341,6 +334,11 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
                }
                level.setBlock(worldPosition, getBlockState().setValue(WinterCoreBlock.FORMED, true), 3);
 
+               BlockPos centerPos = worldPosition.below(2);
+               if (level.getBlockState(centerPos).getBlock() == WinterCoreBlocks.WINTER_CORE_BASE.get()) {
+                   level.setBlock(centerPos, level.getBlockState(centerPos).setValue(com.harbinger.wintercore.block.WinterCoreFoundationBlock.FORMED, true), 3);
+               }
+
                // Grant Advancement "Fimbulwinter" to the nearest player
                net.minecraft.world.entity.player.Player nearest = level.getNearestPlayer(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, 20.0, false);
                if (nearest instanceof net.minecraft.server.level.ServerPlayer serverPlayer && level.getServer() != null) {
@@ -379,6 +377,10 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
             if (level.getBlockState(p2).getBlock() == WinterCoreBlocks.WINTER_CORE_PILLAR.get()) {
                 level.setBlock(p2, level.getBlockState(p2).setValue(WinterCorePillarBlock.FORMED, false), 3);
             }
+        }
+        BlockPos centerPos = worldPosition.below(2);
+        if (level.getBlockState(centerPos).getBlock() == WinterCoreBlocks.WINTER_CORE_BASE.get()) {
+            level.setBlock(centerPos, level.getBlockState(centerPos).setValue(com.harbinger.wintercore.block.WinterCoreFoundationBlock.FORMED, false), 3);
         }
     }
 
@@ -540,6 +542,27 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
             double dz = entity.getZ() - worldPosition.getZ();
             if ((dx * dx + dz * dz) <= (radius * radius)) {
                 
+                // Player Blessings (Safe Zone)
+                if (entity instanceof net.minecraft.world.entity.player.Player player) {
+                    player.setTicksFrozen(0); // Immune to freezing
+                    
+                    // Add Haste I and Regeneration I (duration 100 ticks = 5 seconds)
+                    player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SPEED, 100, 0, false, false, true));
+                    player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 100, 0, false, false, true));
+                    
+                    // Clear any harmful effects from the Spore mod
+                    java.util.List<net.minecraft.world.effect.MobEffect> toRemove = new java.util.ArrayList<>();
+                    for (net.minecraft.world.effect.MobEffectInstance mf : player.getActiveEffects()) {
+                        net.minecraft.resources.ResourceLocation effectId = net.minecraftforge.registries.ForgeRegistries.MOB_EFFECTS.getKey(mf.getEffect());
+                        if (effectId != null && effectId.getNamespace().equals("spore") && mf.getEffect().getCategory() == net.minecraft.world.effect.MobEffectCategory.HARMFUL) {
+                            toRemove.add(mf.getEffect());
+                        }
+                    }
+                    for (net.minecraft.world.effect.MobEffect eff : toRemove) {
+                        player.removeEffect(eff);
+                    }
+                }
+
                 // Add Weakness and Slowness to Hostile Monsters
                 if (entity instanceof net.minecraft.world.entity.monster.Monster) {
                     entity.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 100, 1, false, true));

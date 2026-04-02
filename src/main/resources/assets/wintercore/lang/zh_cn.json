@@ -20,5 +20,11 @@
   "item.wintercore.winter_energy_cell": "凛冬充能单元",
   "tooltip.wintercore.winter_energy_cell": "内部装载高密度寒霜等离子，可驱动核心运作",
   "item.wintercore.winter_infinite_energy_cell": "永冬充能单元（创造）",
-  "tooltip.wintercore.winter_infinite_energy_cell": "蕴含无限的绝对零度能量。核心不再断电。"
+  "tooltip.wintercore.winter_infinite_energy_cell": "蕴含无限的绝对零度能量。核心不再断电。",
+  "wintercore.config.effectRadius": "作用半径",
+  "wintercore.config.damageMultiplier": "伤害倍率",
+  "wintercore.config.renderSnow": "开启暴雪粒子效果",
+  "wintercore.config.preventSporeSpawns": "阻止孢子实体生成",
+  "wintercore.config.energyPerTick": "运行耗电量 (FE/t)",
+  "wintercore.config.blockConversions": "方块净化置换表"
 }

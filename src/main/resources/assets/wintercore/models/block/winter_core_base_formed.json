@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "down": "wintercore:block/core_base_port",
+    "up": "wintercore:block/core_base",
+    "north": "wintercore:block/core_base",
+    "east": "wintercore:block/core_base",
+    "south": "wintercore:block/core_base",
+    "west": "wintercore:block/core_base",
+    "particle": "wintercore:block/core_base"
+  }
+}

@@ -26,6 +26,15 @@ public class WinterCoreBaseBlock extends Block {
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        // 如果玩家主手拿的是凛冬核心，直接放行让原版方块放置逻辑介入，无需 Shift
+        if (hand == InteractionHand.MAIN_HAND) {
+            net.minecraft.world.item.ItemStack held = player.getMainHandItem();
+            if (held.getItem() instanceof net.minecraft.world.item.BlockItem bi
+                    && bi.getBlock() instanceof WinterCoreBlock) {
+                return InteractionResult.PASS;
+            }
+        }
+
         if (!level.isClientSide) {
             // Find the WinterCoreBlockEntity above
             BlockEntity be = level.getBlockEntity(pos.above());
