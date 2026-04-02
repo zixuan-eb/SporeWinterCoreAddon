@@ -69,14 +69,22 @@ public class WinterCoreConfig {
                             "spore:infested_laboratory_block1|spore:lab_block1", 
                             "spore:infested_laboratory_block2|spore:lab_block2", 
                             "spore:infested_laboratory_block3|spore:lab_block3",
-                            "spore:biomass_block|minecraft:snow_block",
-                            "the_flesh_that_hates:flesh_block|minecraft:snow_block",
-                            "the_flesh_that_hates:flesh_sand|minecraft:snow_block",
-                            "the_flesh_that_hates:flesh_tree|minecraft:snow_block",
-                            "the_flesh_that_hates:flesh_plank|minecraft:snow_block",
-                            "the_flesh_that_hates:flesh_pile|minecraft:snow_block",
-                            "the_flesh_that_hates:tumor|minecraft:snow_block",
-                            "the_flesh_that_hates:purulent_tumor|minecraft:snow_block"
+                            "spore:biomass_block|minecraft:blue_ice",
+                            "the_flesh_that_hates:flesh_block|minecraft:blue_ice",
+                            "the_flesh_that_hates:flesh_sand|minecraft:sand",
+                            "the_flesh_that_hates:flesh_tree|minecraft:spruce_log",
+                            "the_flesh_that_hates:flesh_plank|minecraft:spruce_planks",
+                            "the_flesh_that_hates:flesh_pile|minecraft:gravel",
+                            "the_flesh_that_hates:tumor|minecraft:ice",
+                            "the_flesh_that_hates:purulent_tumor|minecraft:packed_ice",
+                            "spore:fungal_shell|minecraft:mushroom_stem",
+                            "spore:brain_remnants|minecraft:ice",
+                            "spore:rotten_log|minecraft:oak_log",
+                            "spore:crusted_bile|minecraft:gravel",
+                            "spore:rotten_grass|minecraft:grass_block",
+                            "spore:mycelium|minecraft:dirt",
+                            "spore:mycelium_block|minecraft:mushroom_stem",
+                            "spore:root_block|minecraft:mushroom_stem"
                     ), obj -> obj instanceof String && ((String) obj).contains("|"));
             
             builder.pop();
