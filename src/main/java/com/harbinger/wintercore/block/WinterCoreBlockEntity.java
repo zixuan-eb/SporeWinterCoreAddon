@@ -231,6 +231,13 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
         if (blockEntity.isPowered != hasPower) {
             blockEntity.isPowered = hasPower;
             level.sendBlockUpdated(pos, state, state, 3);
+            
+            // 通知下方的基座同步发光状态
+            BlockPos pedestalPos = pos.below();
+            BlockState pedestalState = level.getBlockState(pedestalPos);
+            if (pedestalState.hasProperty(com.harbinger.wintercore.block.WinterCoreBaseBlock.POWERED)) {
+                level.setBlockAndUpdate(pedestalPos, pedestalState.setValue(com.harbinger.wintercore.block.WinterCoreBaseBlock.POWERED, hasPower));
+            }
         }
 
         // 核心开启且有电时，每 tick 执行大量方块扫描

@@ -60,17 +60,7 @@ public class WinterCoreBlock extends BaseEntityBlock {
                 WinterCoreBlockEntity::serverTick);
     }
 
-    @Override
-    public net.minecraft.world.InteractionResult use(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.BlockHitResult hit) {
-        if (!level.isClientSide) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof WinterCoreBlockEntity core) {
-                net.minecraftforge.network.NetworkHooks.openScreen((net.minecraft.server.level.ServerPlayer) player, core, pos);
-                return net.minecraft.world.InteractionResult.CONSUME;
-            }
-        }
-        return net.minecraft.world.InteractionResult.SUCCESS;
-    }
+
 
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {

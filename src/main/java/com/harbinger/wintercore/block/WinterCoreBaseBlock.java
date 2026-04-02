@@ -12,8 +12,16 @@ import net.minecraft.world.phys.BlockHitResult;
 
 public class WinterCoreBaseBlock extends Block {
 
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty POWERED = net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED;
+
     public WinterCoreBaseBlock(Properties properties) {
-        super(properties);
+        super(properties.lightLevel(state -> state.getValue(POWERED) ? 14 : 0));
+        this.registerDefaultState(this.stateDefinition.any().setValue(POWERED, false));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(POWERED);
     }
 
     @Override
