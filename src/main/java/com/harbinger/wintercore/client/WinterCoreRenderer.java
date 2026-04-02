@@ -111,7 +111,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         poseStack.translate(0.5D, -1.8f, 0.5D);
         poseStack.mulPose(Axis.YP.rotationDegrees(angleY * 2.0f));
         float outerWidth = 1.6f + 0.1f * (float)Math.sin((time + partialTick) * 0.2f);
-        drawVolumetricBeam(beamBuilder, poseStack, outerWidth, beamHeight, maxLight);
+        drawTrueVolumetricBeam(beamBuilder, poseStack, outerWidth, beamHeight, maxLight);
         poseStack.popPose();
 
         // High intensity inner shaft spinning opposite
@@ -119,7 +119,7 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         poseStack.translate(0.5D, -1.8f, 0.5D);
         poseStack.mulPose(Axis.YP.rotationDegrees(-angleY * 3.0f));
         float innerWidth = 0.6f;
-        drawVolumetricBeam(beamBuilder, poseStack, innerWidth, beamHeight, maxLight);
+        drawTrueVolumetricBeam(beamBuilder, poseStack, innerWidth, beamHeight, maxLight);
         poseStack.popPose();
 
         // 5. Pulse Wave Rings —— 多层高空能量冲击波 (周期大幅加长)
@@ -202,13 +202,31 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         }
     }
 
-    private void drawVolumetricBeam(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light) {
-        int planes = 6;
-        for (int i = 0; i < planes; i++) {
-            matrixStack.pushPose();
-            matrixStack.mulPose(Axis.YP.rotationDegrees(i * (180f / planes)));
-            drawVerticalBeamPlane(builder, matrixStack, width, height, light);
-            matrixStack.popPose();
+    private void drawTrueVolumetricBeam(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light) {
+        var pose = matrixStack.last().pose();
+        var normal = matrixStack.last().normal();
+        float radius = width / 2.0f;
+        int segments = 8; // 8边形圆柱体，完美解决纸片感（也可以是 12 边形）
+        
+        for (int i = 0; i < segments; i++) {
+            float angle1 = i * (float) Math.PI * 2.0f / segments;
+            float angle2 = (i + 1) * (float) Math.PI * 2.0f / segments;
+
+            float x1 = (float) Math.cos(angle1) * radius;
+            float z1 = (float) Math.sin(angle1) * radius;
+            
+            float x2 = (float) Math.cos(angle2) * radius;
+            float z2 = (float) Math.sin(angle2) * radius;
+            
+            // 将贴图横向切分布满圆柱体：
+            float u1 = (float) i / segments;
+            float u2 = (float) (i + 1) / segments;
+            
+            // 四边形的顶点绘制：底左、底右、顶右、顶左
+            builder.vertex(pose, x1, 0, z1).color(255, 255, 255, 255).uv(u1, 1).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 1, 0).endVertex();
+            builder.vertex(pose, x2, 0, z2).color(255, 255, 255, 255).uv(u2, 1).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 1, 0).endVertex();
+            builder.vertex(pose, x2, height, z2).color(255, 255, 255, 255).uv(u2, 0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 1, 0).endVertex();
+            builder.vertex(pose, x1, height, z1).color(255, 255, 255, 255).uv(u1, 0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 1, 0).endVertex();
         }
     }
 
@@ -236,16 +254,6 @@ public class WinterCoreRenderer implements BlockEntityRenderer<WinterCoreBlockEn
         builder.vertex(pose, hw, hh, 0).color(255, 255, 255, 255).uv(1, 1).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 0, 1).endVertex();
         builder.vertex(pose, hw, -hh, 0).color(255, 255, 255, 255).uv(1, 0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 0, 1).endVertex();
         builder.vertex(pose, -hw, -hh, 0).color(255, 255, 255, 255).uv(0, 0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 0, 1).endVertex();
-    }
-
-    private void drawVerticalBeamPlane(VertexConsumer builder, PoseStack matrixStack, float width, float height, int light) {
-        var pose = matrixStack.last().pose();
-        var normal = matrixStack.last().normal();
-        float hw = width / 2.0f;
-        builder.vertex(pose, -hw, 0, 0).color(255, 255, 255, 255).uv(0, 1).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 1, 0).endVertex();
-        builder.vertex(pose, hw, 0, 0).color(255, 255, 255, 255).uv(1, 1).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 1, 0).endVertex();
-        builder.vertex(pose, hw, height, 0).color(255, 255, 255, 255).uv(1, 0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 1, 0).endVertex();
-        builder.vertex(pose, -hw, height, 0).color(255, 255, 255, 255).uv(0, 0).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, 0, 1, 0).endVertex();
     }
     
     @Override
