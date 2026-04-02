@@ -25,11 +25,11 @@ public class WinterCoreMenu extends AbstractContainerMenu {
         this.blockEntity = blockEntity;
 
         // Custom single slot for Winter Energy Cell
-        this.addSlot(new SlotItemHandler(blockEntity.itemHandler, 0, 80, 40));
+        this.addSlot(new SlotItemHandler(blockEntity.itemHandler, 0, 80, 20));
 
         // Player Inventory
         int startX = 8;
-        int startY = 84;
+        int startY = 51;
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
                 this.addSlot(new Slot(playerInventory, col + row * 9 + 9, startX + col * 18, startY + row * 18));

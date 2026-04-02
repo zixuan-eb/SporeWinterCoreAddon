@@ -16,5 +16,7 @@
   "ponder.wintercore.winter_core_assembly.step2": "在基础中心正上方放置凛冬基座",
   "ponder.wintercore.winter_core_assembly.step3": "在四个基本方向的指定位置各竖立两块凛冬石柱（上下各一）",
   "ponder.wintercore.winter_core_assembly.step4": "将凛冬核心放在基座正上方，完成整体结构",
-  "ponder.wintercore.winter_core_assembly.activated": "芬布尔凛冬核心已激活 — 将在范围内缓缓净化感染"
+  "ponder.wintercore.winter_core_assembly.activated": "芬布尔凛冬核心已激活 — 将在范围内缓缓净化感染",
+  "item.wintercore.winter_energy_cell": "凛冬充能单元",
+  "tooltip.wintercore.winter_energy_cell": "内部装载高密度寒霜等离子，可驱动核心运作"
 }

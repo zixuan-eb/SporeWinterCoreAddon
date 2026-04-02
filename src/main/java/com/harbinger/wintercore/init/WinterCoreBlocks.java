@@ -99,5 +99,6 @@ public class WinterCoreBlocks {
                 output.accept(WINTER_CORE_BASE_ITEM.get());
                 output.accept(WINTER_CORE_PEDESTAL_ITEM.get());
                 output.accept(WINTER_CORE_PILLAR_ITEM.get());
+                output.accept(WINTER_ENERGY_CELL.get());
             }).build());
 }

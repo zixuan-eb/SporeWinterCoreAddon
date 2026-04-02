@@ -16,5 +16,7 @@
   "ponder.wintercore.winter_core_assembly.step2": "Place the Fimbulwinter Pedestal at the very center on top of the base",
   "ponder.wintercore.winter_core_assembly.step3": "Erect two Fimbulwinter Pillars at each of the four cardinal positions",
   "ponder.wintercore.winter_core_assembly.step4": "Set the Winter Core on top of the Pedestal to complete the structure",
-  "ponder.wintercore.winter_core_assembly.activated": "The Fimbulwinter Core is now active — it will purify infections within its radius"
+  "ponder.wintercore.winter_core_assembly.activated": "The Fimbulwinter Core is now active — it will purify infections within its radius",
+  "item.wintercore.winter_energy_cell": "Winter Energy Cell",
+  "tooltip.wintercore.winter_energy_cell": "Packed with high-density plasma. Powers the core."
 }
