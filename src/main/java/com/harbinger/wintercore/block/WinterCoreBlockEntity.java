@@ -66,7 +66,7 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
             setChanged();
         }
     };
-    public final EnergyStorage energyStorage = new EnergyStorage(1000000, 10000, 10000, 0);
+    public final EnergyStorage energyStorage = new EnergyStorage(1000000, 1000000, 1000000, 0);
     public final LazyOptional<IItemHandler> lazyItemHandler = LazyOptional.of(() -> itemHandler);
     public final LazyOptional<IEnergyStorage> lazyEnergyHandler = LazyOptional.of(() -> energyStorage);
 
@@ -215,7 +215,7 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
         ItemStack battery = blockEntity.itemHandler.getStackInSlot(0);
         if (!battery.isEmpty()) {
             battery.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
-                int transferable = cap.extractEnergy(1000, true);
+                int transferable = cap.extractEnergy(blockEntity.energyStorage.getMaxEnergyStored(), true);
                 if (transferable > 0) {
                     int accepted = blockEntity.energyStorage.receiveEnergy(transferable, false);
                     cap.extractEnergy(accepted, false);

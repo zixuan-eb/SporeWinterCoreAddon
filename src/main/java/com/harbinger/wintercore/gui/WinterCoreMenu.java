@@ -57,7 +57,7 @@ public class WinterCoreMenu extends AbstractContainerMenu {
                 slot.onQuickCraft(stack, itemstack);
             } else {
                 // Moving from player inventory to machine slot
-                if (stack.getItem() == WinterCoreBlocks.WINTER_ENERGY_CELL.get()) {
+                if (stack.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY).isPresent()) {
                     if (!this.moveItemStackTo(stack, 0, 1, false)) {
                         return ItemStack.EMPTY;
                     }
