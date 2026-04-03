@@ -90,6 +90,15 @@ public class WinterCoreBlocks {
     public static final RegistryObject<Item> WINTER_INFINITE_ENERGY_CELL = ITEMS.register("winter_infinite_energy_cell",
             () -> new com.harbinger.wintercore.item.WinterInfiniteEnergyCellItem(new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
 
+    public static final RegistryObject<Item> UPGRADE_RANGE = ITEMS.register("winter_upgrade_range",
+            () -> new Item(new Item.Properties().rarity(net.minecraft.world.item.Rarity.RARE).stacksTo(16)));
+
+    public static final RegistryObject<Item> UPGRADE_DAMAGE = ITEMS.register("winter_upgrade_damage",
+            () -> new Item(new Item.Properties().rarity(net.minecraft.world.item.Rarity.RARE).stacksTo(16)));
+
+    public static final RegistryObject<Item> UPGRADE_PROTECTION = ITEMS.register("winter_upgrade_protection",
+            () -> new Item(new Item.Properties().rarity(net.minecraft.world.item.Rarity.RARE).stacksTo(1)));
+
     public static final RegistryObject<BlockEntityType<WinterCoreBlockEntity>> WINTER_CORE_BE = BLOCK_ENTITIES.register("winter_core_be",
             () -> BlockEntityType.Builder.of(WinterCoreBlockEntity::new, WINTER_CORE.get()).build(null));
 
@@ -107,5 +116,8 @@ public class WinterCoreBlocks {
                 output.accept(WINTER_CORE_PILLAR_ITEM.get());
                 output.accept(WINTER_ENERGY_CELL.get());
                 output.accept(WINTER_INFINITE_ENERGY_CELL.get());
+                output.accept(UPGRADE_RANGE.get());
+                output.accept(UPGRADE_DAMAGE.get());
+                output.accept(UPGRADE_PROTECTION.get());
             }).build());
 }

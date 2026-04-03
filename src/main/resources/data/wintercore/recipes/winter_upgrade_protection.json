@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "DED",
+    "EIE",
+    "DED"
+  ],
+  "key": {
+    "D": { "item": "minecraft:diamond" },
+    "E": { "item": "minecraft:echo_shard" },
+    "I": { "item": "wintercore:winter_energy_cell" }
+  },
+  "result": {
+    "item": "wintercore:winter_upgrade_protection",
+    "count": 1
+  }
+}

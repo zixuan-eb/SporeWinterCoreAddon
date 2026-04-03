@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "BBB",
+    "BIB",
+    "BBB"
+  ],
+  "key": {
+    "B": { "item": "minecraft:blaze_powder" },
+    "I": { "item": "minecraft:blue_ice" }
+  },
+  "result": {
+    "item": "wintercore:winter_upgrade_damage",
+    "count": 4
+  }
+}

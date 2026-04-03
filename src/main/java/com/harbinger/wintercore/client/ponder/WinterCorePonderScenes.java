@@ -20,81 +20,49 @@ public class WinterCorePonderScenes {
 
     public static void assembly(SceneBuilder scene, SceneBuildingUtil util) {
         // ── 场景初始化 ──────────────────────────────────────────────────────
-        scene.title("winter_core_assembly", "Assembling the Fimbulwinter Core");
+        scene.title("winter_core_assembly", "组装芬布尔凛冬核心");
         scene.configureBasePlate(0, 0, 9);
-        scene.world().hideSection(util.select().everywhere(), Direction.DOWN);
         scene.idle(10);
 
-        // ── 第一步：铺设九块凛冬石（Y=1 的十字延伸图案）────────────────────
-        BlockState baseState = WinterCoreBlocks.WINTER_CORE_BASE.get().defaultBlockState();
-
-        // 中心
-        scene.world().setBlock(util.grid().at(4, 1, 4), baseState, false);
-        // 距离 1 的四方
-        scene.world().setBlock(util.grid().at(5, 1, 4), baseState, false);
-        scene.world().setBlock(util.grid().at(3, 1, 4), baseState, false);
-        scene.world().setBlock(util.grid().at(4, 1, 5), baseState, false);
-        scene.world().setBlock(util.grid().at(4, 1, 3), baseState, false);
-        // 距离 2 的四方（石柱将立于此）
-        scene.world().setBlock(util.grid().at(6, 1, 4), baseState, false);
-        scene.world().setBlock(util.grid().at(2, 1, 4), baseState, false);
-        scene.world().setBlock(util.grid().at(4, 1, 6), baseState, false);
-        scene.world().setBlock(util.grid().at(4, 1, 2), baseState, false);
-
-        scene.world().showSection(util.select().fromTo(2, 1, 2, 6, 1, 6), Direction.UP);
+        // ── 第一步：铺设九块凛冬石（底层，中心原点为 Y=0）────────────────────
+        scene.world().showSection(util.select().fromTo(2, 0, 2, 6, 0, 6), Direction.UP);
         scene.overlay().showText(80)
-                .text(Component.translatable("ponder.wintercore.winter_core_assembly.step1").getString())
+                .text("第一步：铺设9块凛冬石作为底座")
+                .placeNearTarget()
+                .pointAt(util.vector().blockSurface(util.grid().at(4, 0, 4), Direction.UP));
+        scene.idle(90);
+
+        // ── 第二步：放置凛冬基座（Y=1 中心）──────────────────────────────────
+        scene.world().showSection(util.select().position(4, 1, 4), Direction.DOWN);
+        scene.overlay().showText(70)
+                .text("第二步：在中心放置凛冬基座")
                 .placeNearTarget()
                 .pointAt(util.vector().blockSurface(util.grid().at(4, 1, 4), Direction.UP));
-        scene.idle(90);
-
-        // ── 第二步：放置凛冬基座（Y=2 中心）──────────────────────────────────
-        BlockState pedestalState = WinterCoreBlocks.WINTER_CORE_PEDESTAL.get().defaultBlockState();
-        scene.world().setBlock(util.grid().at(4, 2, 4), pedestalState, false);
-        scene.world().showSection(util.select().position(4, 2, 4), Direction.UP);
-        scene.overlay().showText(70)
-                .text(Component.translatable("ponder.wintercore.winter_core_assembly.step2").getString())
-                .placeNearTarget()
-                .pointAt(util.vector().blockSurface(util.grid().at(4, 2, 4), Direction.UP));
         scene.idle(80);
 
-        // ── 第三步：四方各立两块凛冬石柱（Y=2 和 Y=3）────────────────────────
-        BlockState pillarState = WinterCoreBlocks.WINTER_CORE_PILLAR.get().defaultBlockState();
-        // 下部石柱（Y=2 四方位置）
-        scene.world().setBlock(util.grid().at(2, 2, 4), pillarState, false);
-        scene.world().setBlock(util.grid().at(6, 2, 4), pillarState, false);
-        scene.world().setBlock(util.grid().at(4, 2, 2), pillarState, false);
-        scene.world().setBlock(util.grid().at(4, 2, 6), pillarState, false);
-        // 上部石柱（Y=3 四方位置）
-        scene.world().setBlock(util.grid().at(2, 3, 4), pillarState, false);
-        scene.world().setBlock(util.grid().at(6, 3, 4), pillarState, false);
-        scene.world().setBlock(util.grid().at(4, 3, 2), pillarState, false);
-        scene.world().setBlock(util.grid().at(4, 3, 6), pillarState, false);
-
-        scene.world().showSection(util.select().fromTo(2, 2, 2, 6, 3, 6), Direction.UP);
+        // ── 第三步：四方各立两块凛冬石柱（Y=1 和 Y=2）────────────────────────
+        // 石柱分布在 X=2, Z=4 | X=6, Z=4 | X=4, Z=2 | X=4, Z=6
+        scene.world().showSection(util.select().fromTo(2, 1, 2, 6, 2, 6).substract(util.select().position(4, 1, 4)).substract(util.select().position(4, 2, 4)), Direction.DOWN);
         scene.overlay().showText(80)
-                .text(Component.translatable("ponder.wintercore.winter_core_assembly.step3").getString())
+                .text("第三步：在四端竖立凛冬石柱")
                 .placeNearTarget()
-                .pointAt(util.vector().blockSurface(util.grid().at(2, 2, 4), Direction.UP));
+                .pointAt(util.vector().blockSurface(util.grid().at(2, 1, 4), Direction.UP));
         scene.idle(90);
 
-        // ── 第四步：将凛冬核心放在基座正上方（Y=3 中心）────────────────────
-        BlockState coreState = WinterCoreBlocks.WINTER_CORE.get().defaultBlockState()
-                .setValue(WinterCoreBlock.FORMED, false);
-        scene.world().setBlock(util.grid().at(4, 3, 4), coreState, false);
-        scene.world().showSection(util.select().position(4, 3, 4), Direction.DOWN);
+        // ── 第四步：将凛冬核心放在基座正上方（Y=2 中心）────────────────────
+        scene.world().showSection(util.select().position(4, 2, 4), Direction.DOWN);
         scene.overlay().showText(80)
-                .text(Component.translatable("ponder.wintercore.winter_core_assembly.step4").getString())
+                .text("最后：安放凛冬核心")
                 .placeNearTarget()
-                .pointAt(util.vector().blockSurface(util.grid().at(4, 3, 4), Direction.UP));
+                .pointAt(util.vector().blockSurface(util.grid().at(4, 2, 4), Direction.UP));
         scene.idle(90);
 
         // ── 完成提示 ─────────────────────────────────────────────────────────
         scene.overlay().showText(80)
                 .colored(PonderPalette.GREEN)
-                .text(Component.translatable("ponder.wintercore.winter_core_assembly.activated").getString())
+                .text("组装完成！核心将自动构建连接并开始工作")
                 .placeNearTarget()
-                .pointAt(util.vector().blockSurface(util.grid().at(4, 3, 4), Direction.UP));
+                .pointAt(util.vector().blockSurface(util.grid().at(4, 2, 4), Direction.UP));
         scene.idle(80);
     }
 }

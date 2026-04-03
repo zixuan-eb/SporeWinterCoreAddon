@@ -30,12 +30,13 @@ public class WinterCoreScreen extends AbstractContainerScreen<WinterCoreMenu> {
 
         guiGraphics.blit(TEXTURE, relX, relY, 0, 0, this.imageWidth, this.imageHeight);
 
-        // 遮盖多余的左侧2个槽和右侧2个槽，保留中间槽 (X=79)
-        guiGraphics.fill(relX + 43, relY + 19, relX + 79, relY + 37, 0xFFC6C6C6); 
-        guiGraphics.fill(relX + 97, relY + 19, relX + 133, relY + 37, 0xFFC6C6C6); 
-
-        // 核心电池槽的蓝绿色发光外框
-        guiGraphics.renderOutline(relX + 79, relY + 19, 18, 18, 0xFF00FFFF);
+        // 绘制主电池槽位的蓝绿色发光外框
+        guiGraphics.renderOutline(relX + 43, relY + 19, 18, 18, 0xFF00FFFF);
+        
+        // 绘制后面4个升级槽位的紫色外框
+        for (int i = 1; i < 5; i++) {
+            guiGraphics.renderOutline(relX + 43 + i * 18, relY + 19, 18, 18, 0xFFAA00FF);
+        }
 
         // FE Energy Bar 渲染（移动到右侧）
         int stored = this.menu.blockEntity.energyStorage.getEnergyStored();

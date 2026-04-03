@@ -40,7 +40,7 @@ public class WinterCoreBlock extends BaseEntityBlock {
 
     @Override
     public net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level, net.minecraft.core.BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
-        return net.minecraft.world.level.block.Block.box(2.0D, 2.0D, 2.0D, 14.0D, 14.0D, 14.0D);
+        return net.minecraft.world.level.block.Block.box(1.0D, 1.0D, 1.0D, 15.0D, 15.0D, 15.0D);
     }
 
     @Nullable

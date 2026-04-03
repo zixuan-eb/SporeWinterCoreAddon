@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    "EIE",
+    " E "
+  ],
+  "key": {
+    "E": { "item": "minecraft:ender_pearl" },
+    "I": { "item": "minecraft:packed_ice" }
+  },
+  "result": {
+    "item": "wintercore:winter_upgrade_range",
+    "count": 4
+  }
+}

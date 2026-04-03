@@ -21,11 +21,12 @@ public class WinterCorePonderPlugin implements PonderPlugin {
     @Override
     public void registerScenes(PonderSceneRegistrationHelper<ResourceLocation> helper) {
         // 为凛冬核心注册多方块组装教程场景
+        // 关键点：将 schematicResource 指定为 wintercore:winter_core_assembly 以对应 resources 里的文件名
         helper.addStoryBoard(
                 net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(WinterCoreBlocks.WINTER_CORE_ITEM.get()),
                 "winter_core_assembly",
                 WinterCorePonderScenes::assembly,
-                net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(WinterCoreBlocks.WINTER_CORE_ITEM.get())
+                new net.minecraft.resources.ResourceLocation(WinterCoreAddon.MODID, "winter_core_assembly")
         );
     }
 }

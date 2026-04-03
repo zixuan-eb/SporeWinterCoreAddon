@@ -24,8 +24,10 @@ public class WinterCoreMenu extends AbstractContainerMenu {
         super(WinterCoreBlocks.WINTER_CORE_MENU.get(), windowId);
         this.blockEntity = blockEntity;
 
-        // Custom single slot for Winter Energy Cell
-        this.addSlot(new SlotItemHandler(blockEntity.itemHandler, 0, 80, 20));
+        // Custom 5 slots for Battery and Upgrades (Range, Damage, Protection)
+        for (int i = 0; i < 5; i++) {
+            this.addSlot(new SlotItemHandler(blockEntity.itemHandler, i, 44 + i * 18, 20));
+        }
 
         // Player Inventory
         int startX = 8;
@@ -49,23 +51,29 @@ public class WinterCoreMenu extends AbstractContainerMenu {
             ItemStack stack = slot.getItem();
             itemstack = stack.copy();
             
-            // If the clicked slot is our custom machine slot
-            if (idx == 0) {
-                if (!this.moveItemStackTo(stack, 1, 37, true)) {
+            // If the clicked slot is our custom machine slot (0-4)
+            if (idx < 5) {
+                if (!this.moveItemStackTo(stack, 5, 41, true)) {
                     return ItemStack.EMPTY;
                 }
                 slot.onQuickCraft(stack, itemstack);
             } else {
                 // Moving from player inventory to machine slot
                 if (stack.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY).isPresent()) {
-                    if (!this.moveItemStackTo(stack, 0, 1, false)) {
+                    if (!this.moveItemStackTo(stack, 0, 1, false)) { // Slot 0 is reserved for battery
                         return ItemStack.EMPTY;
                     }
-                } else if (idx >= 1 && idx < 28) {
-                    if (!this.moveItemStackTo(stack, 28, 37, false)) {
+                } else if (stack.getItem() == WinterCoreBlocks.UPGRADE_RANGE.get() || 
+                           stack.getItem() == WinterCoreBlocks.UPGRADE_DAMAGE.get() || 
+                           stack.getItem() == WinterCoreBlocks.UPGRADE_PROTECTION.get()) {
+                    if (!this.moveItemStackTo(stack, 1, 5, false)) { // Slots 1-4 for upgrades
                         return ItemStack.EMPTY;
                     }
-                } else if (idx >= 28 && idx < 37 && !this.moveItemStackTo(stack, 1, 28, false)) {
+                } else if (idx >= 5 && idx < 32) {
+                    if (!this.moveItemStackTo(stack, 32, 41, false)) {
+                        return ItemStack.EMPTY;
+                    }
+                } else if (idx >= 32 && idx < 41 && !this.moveItemStackTo(stack, 5, 32, false)) {
                     return ItemStack.EMPTY;
                 }
             }

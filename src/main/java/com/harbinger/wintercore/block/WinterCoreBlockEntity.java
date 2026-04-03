@@ -60,7 +60,7 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
     private int scanZ = 0;
 
     // FE Storage & GUI
-    public final ItemStackHandler itemHandler = new ItemStackHandler(1) {
+    public final ItemStackHandler itemHandler = new ItemStackHandler(5) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
@@ -73,6 +73,10 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
     // 净化波半径：从 0 缓慢增长到 effectRadius，形成从核心向外蔓延的净化效果
     private float waveRadius = 0f;
     private static final float WAVE_GROWTH_PER_SECOND = 0.5f; // 每秒扩展 0.5 格（radius=96 时约 3.2 分钟铺满）
+
+    public float getWaveRadius() {
+        return this.waveRadius;
+    }
 
     // (废弃旧版持续发光环状态)
     
@@ -140,6 +144,10 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
         this.isPowered = tag.getBoolean("IsPowered");
         if (tag.contains("Inventory")) {
             itemHandler.deserializeNBT(tag.getCompound("Inventory"));
+            // 兼容之前只插了一块电池的老存档，强制将槽位扩充至 5 格
+            if (itemHandler.getSlots() < 5) {
+                itemHandler.setSize(5);
+            }
         }
         if (tag.contains("Energy")) {
             energyStorage.deserializeNBT(tag.get("Energy"));
@@ -194,7 +202,7 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
         // Spawn massive snowstorms if config allows
         if (WinterCoreConfig.COMMON.renderSnow.get()) {
             net.minecraft.client.player.LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
-            int radius = WinterCoreConfig.COMMON.effectRadius.get();
+            float radius = blockEntity.getWaveRadius(); // 实装同步的波纹辐射范围
             if (player != null && player.distanceToSqr(pos.getX(), pos.getY(), pos.getZ()) <= radius * radius) {
                 for (int i = 0; i < 60; i++) {
                     double px = player.getX() + level.random.nextGaussian() * 20;
@@ -218,6 +226,43 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
         }
     }
 
+    public int getRangeUpgrades() {
+        int count = 0;
+        for (int i = 1; i < 5; i++) {
+            if (itemHandler.getStackInSlot(i).getItem() == WinterCoreBlocks.UPGRADE_RANGE.get())
+                count += itemHandler.getStackInSlot(i).getCount();
+        }
+        return count;
+    }
+
+    public int getDamageUpgrades() {
+        int count = 0;
+        for (int i = 1; i < 5; i++) {
+            if (itemHandler.getStackInSlot(i).getItem() == WinterCoreBlocks.UPGRADE_DAMAGE.get())
+                count += itemHandler.getStackInSlot(i).getCount();
+        }
+        return count;
+    }
+
+    public boolean hasProtectionUpgrade() {
+        for (int i = 1; i < 5; i++) {
+            if (itemHandler.getStackInSlot(i).getItem() == WinterCoreBlocks.UPGRADE_PROTECTION.get())
+                return true;
+        }
+        return false;
+    }
+
+    public int getMaxRadius() {
+        int baseRadius = WinterCoreConfig.COMMON.effectRadius.get();
+        return baseRadius + getRangeUpgrades() * 10;
+    }
+
+    public int getTickEnergyCost() {
+        int baseEnergy = WinterCoreConfig.COMMON.energyPerTick.get();
+        double mult = 1.0 + (getRangeUpgrades() * 0.4) + (getDamageUpgrades() * 0.3) + (hasProtectionUpgrade() ? 0.8 : 0.0);
+        return (int)(baseEnergy * mult);
+    }
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, WinterCoreBlockEntity blockEntity) {
         blockEntity.tickCounter++;
 
@@ -234,8 +279,8 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
             });
         }
 
-        // 常规每刻耗电
-        int energyPerTick = WinterCoreConfig.COMMON.energyPerTick.get();
+        // 动态计算由于插入了各式各样的升级插件后所需的最新单 Tick 供电下限
+        int energyPerTick = blockEntity.getTickEnergyCost();
         boolean hasPower = blockEntity.energyStorage.getEnergyStored() >= energyPerTick;
 
         // 同步状态到客户端渲染层
@@ -268,14 +313,23 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
             if (!blockEntity.isFormed) return;
             if (!hasPower) return; // 没电暂停一切特效散发与波幅推进
             
-            // 每秒推进净化波前沿（从核心向外缓慢扩散）
-            int radius = WinterCoreConfig.COMMON.effectRadius.get();
-            if (blockEntity.waveRadius < radius) {
-                boolean wasNotFull = blockEntity.waveRadius < radius;
-                blockEntity.waveRadius = Math.min(radius, blockEntity.waveRadius + WAVE_GROWTH_PER_SECOND);
+            int maxRadius = blockEntity.getMaxRadius();
+            
+            // 若取出升级插件导致目标大网收缩，则安全裁退当前波纹
+            if (blockEntity.waveRadius > maxRadius) {
+                blockEntity.waveRadius = maxRadius;
+                blockEntity.setChanged();
+            }
+
+            // 每秒动态推进净化波前沿（距离越远扩得越快，营造平滑动态跟随感）
+            if (blockEntity.waveRadius < maxRadius) {
+                boolean wasNotFull = blockEntity.waveRadius < maxRadius;
+                // 让其每秒推进剩余距离的 10%，保底推进 0.5 格
+                float growth = Math.max(WAVE_GROWTH_PER_SECOND, (maxRadius - blockEntity.waveRadius) * 0.1f);
+                blockEntity.waveRadius = Math.min((float)maxRadius, blockEntity.waveRadius + growth);
                 blockEntity.setChanged();
                 // 首次铺满：触发净化完成特效
-                if (wasNotFull && blockEntity.waveRadius >= radius && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                if (wasNotFull && blockEntity.waveRadius >= maxRadius && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
                     blockEntity.onPurificationComplete(serverLevel);
                 }
             }
@@ -536,30 +590,51 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
     private void processEntityDamage() {
         if (level == null) return;
         
-        int radius = WinterCoreConfig.COMMON.effectRadius.get();
-        double multiplier = WinterCoreConfig.COMMON.damageMultiplier.get();
-        AABB aabb = new AABB(worldPosition).inflate(radius);
+        int activeRadius = (int) Math.ceil(this.waveRadius);
+        double multiplier = WinterCoreConfig.COMMON.damageMultiplier.get() + getDamageUpgrades() * 0.6; // +60% dmg per upgrade
+        AABB aabb = new AABB(worldPosition).inflate(activeRadius);
         List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, aabb);
         
+        boolean isProtectBuffed = hasProtectionUpgrade();
+
         for (LivingEntity entity : entities) {
             double dx = entity.getX() - worldPosition.getX();
             double dz = entity.getZ() - worldPosition.getZ();
-            if ((dx * dx + dz * dz) <= (radius * radius)) {
+            if ((dx * dx + dz * dz) <= (activeRadius * activeRadius)) {
                 
                 // Player Blessings (Safe Zone)
                 if (entity instanceof net.minecraft.world.entity.player.Player player) {
                     player.setTicksFrozen(0); // Immune to freezing
                     
-                    // Add Haste I and Regeneration I (duration 100 ticks = 5 seconds)
-                    player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SPEED, 100, 0, false, false, true));
-                    player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 100, 0, false, false, true));
+                    int buffDuration = 100;
                     
-                    // Clear any harmful effects from the Spore mod
+                    // Add standard buffs
+                    player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SPEED, buffDuration, isProtectBuffed ? 1 : 0, false, false, true));
+                    player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, buffDuration, isProtectBuffed ? 1 : 0, false, false, true));
+                    
+                    if (isProtectBuffed) {
+                        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE, buffDuration, 0, false, true, true));
+                        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, buffDuration, 0, false, true, true));
+                        // 力量 III（amplifier=2 即游戏内显示的"力量III"）
+                        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, buffDuration, 2, false, true, true));
+                    }
+                    
+                    // 清除负面效果：
+                    // 无防护升级时：仅清除孢子命名空间的有害效果
+                    // 有防护升级时：清除所有来源的负面效果，净化能力拉满
                     java.util.List<net.minecraft.world.effect.MobEffect> toRemove = new java.util.ArrayList<>();
                     for (net.minecraft.world.effect.MobEffectInstance mf : player.getActiveEffects()) {
-                        net.minecraft.resources.ResourceLocation effectId = net.minecraftforge.registries.ForgeRegistries.MOB_EFFECTS.getKey(mf.getEffect());
-                        if (effectId != null && effectId.getNamespace().equals("spore") && mf.getEffect().getCategory() == net.minecraft.world.effect.MobEffectCategory.HARMFUL) {
-                            toRemove.add(mf.getEffect());
+                        if (mf.getEffect().getCategory() == net.minecraft.world.effect.MobEffectCategory.HARMFUL) {
+                            if (isProtectBuffed) {
+                                // 极寒壁垒激活：免疫一切毒、凋零、饥饿、中毒等全部负面效果
+                                toRemove.add(mf.getEffect());
+                            } else {
+                                // 基础状态：仅清除 Spore 模组施加的有害效果
+                                net.minecraft.resources.ResourceLocation effectId = net.minecraftforge.registries.ForgeRegistries.MOB_EFFECTS.getKey(mf.getEffect());
+                                if (effectId != null && effectId.getNamespace().equals("spore")) {
+                                    toRemove.add(mf.getEffect());
+                                }
+                            }
                         }
                     }
                     for (net.minecraft.world.effect.MobEffect eff : toRemove) {
@@ -569,8 +644,8 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
 
                 // Add Weakness and Slowness to Hostile Monsters
                 if (entity instanceof net.minecraft.world.entity.monster.Monster) {
-                    entity.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 100, 1, false, true));
-                    entity.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, 100, 1, false, true));
+                    entity.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 100, isProtectBuffed ? 3 : 1, false, true));
+                    entity.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, 100, isProtectBuffed ? 2 : 1, false, true));
                 }
                 
                 String entityId = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType()).toString();
@@ -579,7 +654,7 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
                     entity.hurt(level.damageSources().magic(), baseDamage);
                     
                     if (entity.getType().is(EntityTypeTags.FREEZE_HURTS_EXTRA_TYPES)) {
-                        entity.setTicksFrozen(entity.getTicksFrozen() + 600);
+                        entity.setTicksFrozen(entity.getTicksFrozen() + (isProtectBuffed ? 1200 : 600));
                         entity.hurt(level.damageSources().freeze(), 10.0f * (float)multiplier); 
                     }
                     
@@ -616,7 +691,7 @@ public class WinterCoreBlockEntity extends BlockEntity implements MenuProvider, 
         double cx = worldPosition.getX() + 0.5;
         double cy = worldPosition.getY() + 0.5;
         double cz = worldPosition.getZ() + 0.5;
-        int maxR = WinterCoreConfig.COMMON.effectRadius.get();
+        int maxR = WinterCoreConfig.COMMON.effectRadius.get() + getRangeUpgrades() * 10;
 
         // 内圈爆发：核心周围螺旋上升的粒子柱
         for (int i = 0; i < 60; i++) {
